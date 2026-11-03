@@ -23,6 +23,8 @@ logging.getLogger("httpx2").setLevel(logging.WARNING)
 
 def create_app(settings: Settings | None = None, source=None, provider_factory=None) -> FastAPI:
     config = settings or Settings()
+    if config.render and not config.database_url:
+        raise RuntimeError("Render deployment requires DATABASE_URL; ephemeral SQLite is refused")
     store = Store(config.database_url or config.db_path)
     source = source or (
         FixtureSource() if config.source_mode == "snapshot" else GitHubSource(config.github_token)
@@ -39,6 +41,7 @@ def create_app(settings: Settings | None = None, source=None, provider_factory=N
         worker.start()
         yield
         await worker.stop()
+        store.close()
 
     app = FastAPI(title="Trace / Repository Investigation", version="0.1.0", lifespan=lifespan)
     app.state.store, app.state.worker = store, worker

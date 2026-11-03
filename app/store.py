@@ -21,10 +21,8 @@ class AdmissionError(Exception):
 class PostgresConnection:
     """Small parameter adapter for the shared fixed SQL statements; no dynamic user SQL."""
 
-    def __init__(self, url: str):
-        self.connection = psycopg.connect(
-            url, connect_timeout=10, row_factory=dict_row, options="-c statement_timeout=5000"
-        )
+    def __init__(self, connection):
+        self.connection = connection
 
     def execute(self, sql: str, params=()):
         return self.connection.execute(sql.replace("?", "%s"), params)
@@ -33,7 +31,11 @@ class PostgresConnection:
         return self
 
     def __exit__(self, exc_type, exc, traceback):
-        return self.connection.__exit__(exc_type, exc, traceback)
+        if exc_type is None:
+            self.connection.commit()
+        else:
+            self.connection.rollback()
+        return False
 
 
 class Store:
@@ -42,6 +44,7 @@ class Store:
         if not self.postgres:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.path = path
+        self._pg_connection: psycopg.Connection[dict] | None = None
         with self.connect() as db:
             if not self.postgres:
                 db.execute("PRAGMA journal_mode=WAL")
@@ -52,10 +55,21 @@ class Store:
 
     def connect(self):
         if self.postgres:
-            return PostgresConnection(self.path)
+            if self._pg_connection is None or self._pg_connection.closed:
+                self._pg_connection = psycopg.connect(
+                    self.path,
+                    connect_timeout=10,
+                    row_factory=dict_row,
+                    options="-c statement_timeout=5000",
+                )
+            return PostgresConnection(self._pg_connection)
         db = sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
         return db
+
+    def close(self):
+        if self._pg_connection is not None:
+            self._pg_connection.close()
 
     def recover(self):
         with self.connect() as db:

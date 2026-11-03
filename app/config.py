@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     access_token: str = ""
     github_token: str = ""
+    render: bool = False
     database_url: str = ""
     deployment_notice: str = ""
     db_path: str = "data/investigations.sqlite3"

@@ -119,3 +119,8 @@ def test_github_issue_report_can_be_loaded_and_exported(tmp_path):
         assert result.status_code == 200
         assert result.json()["issue"]["issue_url"].endswith("/issues/1")
         assert result.json()["issue"]["title"].startswith("Docs:")
+
+
+def test_render_refuses_ephemeral_sqlite(tmp_path):
+    with pytest.raises(RuntimeError, match="requires DATABASE_URL"):
+        create_app(Settings(_env_file=None, render=True, db_path=str(tmp_path / "unpersisted.db")))
