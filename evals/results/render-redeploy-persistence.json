@@ -1,0 +1,9 @@
+{
+  "run_id": "dbbc8b5789434682a60927bb0dd43e67",
+  "kind": "failed-run metadata, not a completed report",
+  "preserved_across_redeploy": true,
+  "before_sha256": "f41a8be86899d066e080a70fe3c1306feb4ccbdfa980f18754d7b12e7726deee",
+  "after_sha256": "f41a8be86899d066e080a70fe3c1306feb4ccbdfa980f18754d7b12e7726deee",
+  "ready_http": 200,
+  "complete_report_persistence_verified_on_host": false
+}

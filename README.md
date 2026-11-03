@@ -2,8 +2,10 @@
 
 An independent engineering project by Manenimabasi Udoh. Trace documents and investigates one public Go repository at an immutable commit, then checks source references and model claim support separately. It produces a human-review report, not an automatic patch.
 
-**Hosted app:** https://repository-investigation-agent.onrender.com  
-**Public saved-report viewer:** https://repository-investigation-agent.vercel.app  
+**Hosted app:** https://repository-investigation-agent.onrender.com
+
+**Public saved-report viewer:** https://repository-investigation-agent.vercel.app
+
 **Source:** https://github.com/manenim/repository-investigation-agent
 
 The app is deployed on Render Free with managed PostgreSQL 18. Health/readiness and authenticated run storage work. **The hosted generation smoke test is blocked by GitHub HTTP 403: a dedicated read-only GitHub credential is still required.** GitHub requires owner reauthentication before creating it. Full live-model generation, exports and container persistence have been tested locally; the saved public report was generated with the real model and real GitHub ingestion.

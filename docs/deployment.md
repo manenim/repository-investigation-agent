@@ -9,9 +9,9 @@
 
 ## Established results
 
-The service built and started at commit `03288fc3193be7a02efca971ea1876c7a68ee423`. Public health and readiness returned HTTP 200; authenticated POST created a queued investigation and the worker persisted its explicit failure. Unauthenticated report access returned 401. Render's internal Postgres connection works; local direct external connections were intermittent.
+The service initially built at commit `03288fc3193be7a02efca971ea1876c7a68ee423` and was redeployed successfully at `730fa40efab25b3d8c2a7edfe6d23b298bb0657d`. The failed-run metadata survived that redeploy byte-for-byte; completed-report persistence on the host remains unverified. Public health and readiness returned HTTP 200; authenticated POST created a queued investigation and the worker persisted its explicit failure. Unauthenticated report access returned 401. Render's internal Postgres connection works; local direct external connections were intermittent.
 
-[Hosted CI passed](https://github.com/manenim/repository-investigation-agent/actions/runs/41667367525) for that commit. Local checks currently cover 44 automated cases. Separate integration exercised a real local PostgreSQL 16 server, including API→report, exports, app restart, interrupted-run recovery and admission control; it used the deterministic provider and does not establish live model quality.
+[Hosted CI passed](https://github.com/manenim/repository-investigation-agent/actions/runs/41669362655) for the latest deployed implementation commit. Local checks currently cover 44 automated cases. Separate integration exercised a real local PostgreSQL 16 server, including API→report, exports, app restart, interrupted-run recovery and admission control; it used the deterministic provider and does not establish live model quality.
 
 Local real-provider and real-GitHub runs generated complete reports and both exports. A local Docker restart preserved a completed report byte-for-byte and marked a deliberately interrupted run failed. See `evals/results/container-restart.json` and the actual report artifacts.
 
