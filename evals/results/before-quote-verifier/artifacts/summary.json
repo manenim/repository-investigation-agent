@@ -1,0 +1,856 @@
+{
+  "suite_version": "v1",
+  "commit": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+  "created_at": "2026-11-03T15:11:47.288315+00:00",
+  "mode": "live_model",
+  "cases": [
+    {
+      "id": "architecture",
+      "retrieval_witnesses": [
+        {
+          "path": "model.go",
+          "start": 35,
+          "end": 38,
+          "covered": true
+        },
+        {
+          "path": "memory.go",
+          "start": 14,
+          "end": 21,
+          "covered": true
+        },
+        {
+          "path": "redis.go",
+          "start": 16,
+          "end": 25,
+          "covered": true
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": false,
+      "expected_insufficient": false,
+      "claims": 10,
+      "flagged_claims": 0,
+      "seconds": 22.709,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5999,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 263,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6262
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 6339,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 495,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6834
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 6567,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 468,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 7035
+        }
+      ]
+    },
+    {
+      "id": "initialization-timeout",
+      "retrieval_witnesses": [
+        {
+          "path": "redis.go",
+          "start": 38,
+          "end": 42,
+          "covered": true
+        },
+        {
+          "path": "redis.go",
+          "start": 66,
+          "end": 75,
+          "covered": true
+        },
+        {
+          "path": "redis.go",
+          "start": 98,
+          "end": 108,
+          "covered": false
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": true,
+      "expected_insufficient": false,
+      "claims": 10,
+      "flagged_claims": 4,
+      "seconds": 18.631,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5416,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 262,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 5678
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 5752,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 803,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6555
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 5991,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 273,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6264
+        }
+      ]
+    },
+    {
+      "id": "script-cache",
+      "retrieval_witnesses": [
+        {
+          "path": "redis.go",
+          "start": 103,
+          "end": 117,
+          "covered": true
+        },
+        {
+          "path": "redis_evidence_test.go",
+          "start": 124,
+          "end": 130,
+          "covered": false
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": false,
+      "expected_insufficient": false,
+      "claims": 8,
+      "flagged_claims": 0,
+      "seconds": 23.897,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5816,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 281,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6097
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 6169,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 431,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6600
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 6270,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 304,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6574
+        }
+      ]
+    },
+    {
+      "id": "fail-open",
+      "retrieval_witnesses": [
+        {
+          "path": "cmd/example-server/main.go",
+          "start": 51,
+          "end": 61,
+          "covered": true
+        },
+        {
+          "path": "cmd/example-server/main_test.go",
+          "start": 51,
+          "end": 52,
+          "covered": true
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": true,
+      "expected_insufficient": false,
+      "claims": 10,
+      "flagged_claims": 1,
+      "seconds": 22.715,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 6176,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 279,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6455
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 6522,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 612,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 7134
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 6788,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 463,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 7251
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "retrieval_witnesses": [
+        {
+          "path": "cmd/example-server/main.go",
+          "start": 40,
+          "end": 50,
+          "covered": true
+        },
+        {
+          "path": "cmd/example-server/main_test.go",
+          "start": 28,
+          "end": 39,
+          "covered": true
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": false,
+      "expected_insufficient": false,
+      "claims": 10,
+      "flagged_claims": 0,
+      "seconds": 23.483,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5974,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 273,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6247
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 6322,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 584,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6906
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 6556,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 411,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6967
+        }
+      ]
+    },
+    {
+      "id": "retry-header",
+      "retrieval_witnesses": [
+        {
+          "path": "cmd/example-server/main.go",
+          "start": 55,
+          "end": 59,
+          "covered": true
+        },
+        {
+          "path": "cmd/example-server/main_test.go",
+          "start": 51,
+          "end": 51,
+          "covered": true
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": false,
+      "expected_insufficient": false,
+      "claims": 10,
+      "flagged_claims": 0,
+      "seconds": 29.337,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5386,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 268,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 5654
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 5726,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 614,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6340
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 5979,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 343,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6322
+        }
+      ]
+    },
+    {
+      "id": "memory-refill",
+      "retrieval_witnesses": [
+        {
+          "path": "memory.go",
+          "start": 33,
+          "end": 43,
+          "covered": true
+        },
+        {
+          "path": "memory.go",
+          "start": 52,
+          "end": 67,
+          "covered": true
+        }
+      ],
+      "citation_checks": [
+        {
+          "evidence_id": "E1",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E2",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E3",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E4",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E5",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E6",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E7",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E8",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E9",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        },
+        {
+          "evidence_id": "E10",
+          "valid": true,
+          "reason": "Pinned blob, path, lines and excerpt match"
+        }
+      ],
+      "status": "complete",
+      "insufficient_evidence": true,
+      "expected_insufficient": false,
+      "claims": 8,
+      "flagged_claims": 0,
+      "seconds": 16.335,
+      "usage": [
+        {
+          "stage": "documentation",
+          "attempt": 1,
+          "input_tokens": 5900,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 292,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6192
+        },
+        {
+          "stage": "investigation",
+          "attempt": 1,
+          "input_tokens": 6266,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 456,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6722
+        },
+        {
+          "stage": "semantic_verification",
+          "attempt": 1,
+          "input_tokens": 6383,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0
+          },
+          "output_tokens": 361,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6744
+        }
+      ]
+    }
+  ],
+  "injections": [],
+  "cost_usd": null,
+  "cost_note": "Token usage recorded; billed cost not retrieved."
+}

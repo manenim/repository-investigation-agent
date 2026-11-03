@@ -1,0 +1,361 @@
+{
+  "reviewer": "Codex development assistant performing source inspection; not an independent human reviewer",
+  "reviewed_at": "2026-11-03T15:29:01.305197+00:00",
+  "commit": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+  "selection_basis": "Architecture + known initialization behavior + missing production incident; all claims in these three cases reviewed, selected by category rather than accepted outcome.",
+  "rubric": "docs/evaluation.md",
+  "claims_reviewed": 28,
+  "accepted_observations": 5,
+  "accepted_and_source_supported": 4,
+  "source_supported_claims_flagged": 14,
+  "independent_human_review_complete": false,
+  "claims": [
+    {
+      "case": "architecture",
+      "claim_id": "doc:C1",
+      "claim": "The architecture of the gateway-rate-limiter uses the Token Bucket algorithm for rate limiting.",
+      "evidence_ids": [
+        "E3"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:1-21 explicitly describes token-bucket operation."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "doc:C2",
+      "claim": "MemoryLimiter implements rate limiting using a local in-process map to store state, while RedisLimiter uses Redis for a distributed approach.",
+      "evidence_ids": [
+        "E2",
+        "E7"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "memory.go:14-27 shows local map; redis.go:16-25 describes Redis-backed distribution."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "doc:C3",
+      "claim": "MemoryLimiter's state is not shared across multiple instances, making it suitable for single-instance deployments only, whereas RedisLimiter allows global limits across multiple instances.",
+      "evidence_ids": [
+        "E4",
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:89-99 describes process-local map and Redis storage; README names the distributed backend. This is implementation scope, not measured deployment behavior."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "doc:C4",
+      "claim": "The Decision structure returned by the Allow method provides information about whether a request is allowed, the remaining tokens, and timing details for rate limit headers.",
+      "evidence_ids": [
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:73-82 lists Allow, Remaining, RetryAfter and ResetTime fields and meanings."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "issue:C1",
+      "claim": "The architecture of the gateway-rate-limiter uses the Token Bucket algorithm for rate limiting.",
+      "evidence_ids": [
+        "E3"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:1-21 explicitly describes token-bucket operation."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "issue:C2",
+      "claim": "MemoryLimiter implements rate limiting using a local in-process map to store state, while RedisLimiter uses Redis for a distributed approach.",
+      "evidence_ids": [
+        "E2",
+        "E7"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "memory.go:14-27 shows local map; redis.go:16-25 describes Redis-backed distribution."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "issue:C3",
+      "claim": "MemoryLimiter's state is not shared across multiple instances, making it suitable for single-instance deployments only, whereas RedisLimiter allows global limits across multiple instances.",
+      "evidence_ids": [
+        "E4",
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:89-99 describes process-local map and Redis storage; README names the distributed backend. This is implementation scope, not measured deployment behavior."
+    },
+    {
+      "case": "architecture",
+      "claim_id": "issue:C4",
+      "claim": "The Decision structure returned by the Allow method provides information about whether a request is allowed, the remaining tokens, and timing details for rate limit headers.",
+      "evidence_ids": [
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:73-82 lists Allow, Remaining, RetryAfter and ResetTime fields and meanings."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "doc:C1",
+      "claim": "The `WithTimeout` function sets a timeout for Redis operations, with a default of 5 seconds, which can be overridden during the initialization of the Redis limiter.",
+      "evidence_ids": [
+        "E4",
+        "E7"
+      ],
+      "application_verdict": "supported",
+      "accepted_as_observation": true,
+      "source_inspection_verdict": "supported",
+      "rationale": "redis.go:38-42 and 54-66 show configurable initialization timeout and default 5s."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "doc:C2",
+      "claim": "The `NewRedisLimiter` function implements a context with a timeout during the Ping operation to validate the client's connectivity to Redis, ensuring it adheres to the configured timeout settings.",
+      "evidence_ids": [
+        "E4",
+        "E5"
+      ],
+      "application_verdict": "supported",
+      "accepted_as_observation": true,
+      "source_inspection_verdict": "supported",
+      "rationale": "redis.go:66-70 creates a timeout context and passes it to Ping."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "doc:C3",
+      "claim": "The `Allow` method of the `MemoryLimiter` and `RedisLimiter` models each call as costing 1 token, which is used to evaluate whether a request should be permitted based on the remaining token count.",
+      "evidence_ids": [
+        "E3",
+        "E6"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:110 states the package models each Allow call as cost 1; redis.go Allow comment matches."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "doc:C4",
+      "claim": "The system employs the Lua script in Redis to perform atomic updates for the token-bucket, allowing synchronization of rate limit enforcement across multiple instances.",
+      "evidence_ids": [
+        "E9",
+        "E10"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:46-49 describes Lua read/compute/write atomically across instances."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C1",
+      "claim": "The `WithTimeout` function sets a timeout for Redis operations, with a default of 5 seconds, which can be overridden during the initialization of the Redis limiter.",
+      "evidence_ids": [
+        "E4",
+        "E7"
+      ],
+      "application_verdict": "supported",
+      "accepted_as_observation": true,
+      "source_inspection_verdict": "supported",
+      "rationale": "redis.go:38-42 and 54-66 show configurable initialization timeout and default 5s."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C2",
+      "claim": "The `NewRedisLimiter` function implements a context with a timeout during the Ping operation to validate the client's connectivity to Redis, ensuring it adheres to the configured timeout settings.",
+      "evidence_ids": [
+        "E4",
+        "E5"
+      ],
+      "application_verdict": "supported",
+      "accepted_as_observation": true,
+      "source_inspection_verdict": "supported",
+      "rationale": "redis.go:66-70 creates a timeout context and passes it to Ping."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C3",
+      "claim": "The `Allow` method of the `MemoryLimiter` and `RedisLimiter` models each call as costing 1 token, which is used to evaluate whether a request should be permitted based on the remaining token count.",
+      "evidence_ids": [
+        "E3",
+        "E6"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:110 states the package models each Allow call as cost 1; redis.go Allow comment matches."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C4",
+      "claim": "The system employs the Lua script in Redis to perform atomic updates for the token-bucket, allowing synchronization of rate limit enforcement across multiple instances.",
+      "evidence_ids": [
+        "E9",
+        "E10"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:46-49 describes Lua read/compute/write atomically across instances."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C5",
+      "claim": "The timeout configured by `WithTimeout` is not applied to the `Allow` method calls, which means each `Allow` call does not enforce the timeout that is set during Redis limiter initialization.",
+      "evidence_ids": [],
+      "application_verdict": "unsupported",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "Behavior is supported elsewhere in redis.go, but this claim cites no evidence. Reject as a supported report claim."
+    },
+    {
+      "case": "initialization-timeout",
+      "claim_id": "issue:C6",
+      "claim": "The documentation advises using a distinct method for each Redis operation but does not clarify how timeouts apply to individual `Allow` calls, leading to ambiguity regarding the enforced limits during these calls.",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "unsupported",
+      "rationale": "The cited documentation does not advise a distinct method for each Redis operation; the asserted ambiguity is not grounded."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "doc:C1",
+      "claim": "The gateway-rate-limiter package implements a rate-limiting mechanism with both in-memory and Redis-backed options for token bucket policies to manage user access.",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "model.go defines token-bucket policy/interface; doc.go:39-49 describes both memory and Redis implementations."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "doc:C2",
+      "claim": "RedisLimiter offers distributed rate limiting using a Lua script for atomic operations, suitable for environments with multiple application instances.",
+      "evidence_ids": [
+        "E2"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "supported",
+      "rationale": "doc.go:46-49 explicitly describes distributed Lua atomic updates."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "doc:C3",
+      "claim": "The application includes a metrics collection interface, allowing for telemetry integration without being locked to a specific vendor.",
+      "evidence_ids": [
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "MetricsRecorder exists in model.go, but E5 is README:409-449 and does not contain that interface or vendor-independence statement."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "doc:C4",
+      "claim": "The library provides a fail-open or fail-closed policy for handling request denials based on application needs.",
+      "evidence_ids": [
+        "E8"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "unsupported",
+      "rationale": "README:180-186 says the library returns errors and does not force a policy. The claim misleadingly attributes a policy to the library."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C1",
+      "claim": "The Redis cluster may have failed due to unhandled errors when Redis is unavailable, as indicated in the code that specifies decision-making based on Redis availability.",
+      "evidence_ids": [
+        "E2",
+        "E6"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "No production cluster telemetry is supplied. A possible cause is presented as an observation, not a grounded incident finding."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C2",
+      "claim": "Redis script cache loss can result in failure to execute commands without reloading scripts, as discussed in the performance documentation, which may lead to issues during Redis outages.",
+      "evidence_ids": [
+        "E5"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "E5 documents script cache loss and reconstructing the limiter, but supplies no evidence of the requested production outage."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C3",
+      "claim": "The library does not impose a strict fail-open or fail-closed policy, leaving it to the application to choose an error handling strategy, which could lead to degraded performance during Redis outages.",
+      "evidence_ids": [
+        "E8"
+      ],
+      "application_verdict": "supported",
+      "accepted_as_observation": true,
+      "source_inspection_verdict": "unsupported",
+      "rationale": "README:180-186 supports caller-selected error policy, but not the appended claim of degraded performance during Redis outages. A compound observation exceeds the citation."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C4",
+      "claim": "Performance benchmarks show a significant increase in latency when using Redis for denial cases, which may affect user experience under heavy load.",
+      "evidence_ids": [
+        "E3"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "unsupported",
+      "rationale": "docs/performance.md:43-47 shows Redis denied samples overlapping allowed samples; it establishes neither a significant increase nor heavy-load user impact."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C5",
+      "claim": "High CPU usage may be linked to contention delays in the MemoryLimiter during high concurrency, as indicated in the profiling runs.",
+      "evidence_ids": [
+        "E4"
+      ],
+      "application_verdict": "insufficient_evidence",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "Mutex delay is documented, but the cited profiling does not establish high CPU as a production cause. This should be a carefully bounded hypothesis, not an observation."
+    },
+    {
+      "case": "production-incident",
+      "claim_id": "issue:C6",
+      "claim": "The log capture and monitoring mechanisms for Redis connections may not be sufficient to provide clear insights into failure modes during production outages.",
+      "evidence_ids": [],
+      "application_verdict": "unsupported",
+      "accepted_as_observation": false,
+      "source_inspection_verdict": "insufficient_evidence",
+      "rationale": "No cited evidence supports assertions about production log sufficiency."
+    }
+  ]
+}

@@ -1,0 +1,695 @@
+{
+  "run_id": "f695346aa63e4956bcd4bf2a2086671d",
+  "repository": "manenim/gateway-rate-limiter",
+  "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+  "created_at": "2000-01-01",
+  "issue": {
+    "repository": "manenim/gateway-rate-limiter",
+    "ref": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+    "issue_url": null,
+    "title": "Explain the token-bucket architecture",
+    "body": "How do MemoryLimiter and RedisLimiter implement RateLimiter? What state is shared?"
+  },
+  "mode": "live_model",
+  "model": "gpt-4o-mini",
+  "prompt_version": "evidence-v2-quote-support",
+  "snapshot": {
+    "repository": "manenim/gateway-rate-limiter",
+    "sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+    "files": {
+      ".github/ISSUE_TEMPLATE/feature_request.md": {
+        "text": "---\nname: Feature request\nabout: Suggest an idea or enhancement\ntitle: ''\nlabels: enhancement\nassignees: ''\n---\n\n**Is your feature request related to a problem?**\nA clear and concise description of what the problem is. Example: I'm always frustrated when...\n\n**Describe the solution you'd like**\nA clear and concise description of what you want to happen.\n\n**Describe alternatives you've considered**\nA clear and concise description of any alternative solutions or features you've considered.\n\n**Additional context**\nAdd any other context or screenshots about the feature request here.\n",
+        "blob_sha": "5df17b89c55559c94169b83175ba727c2b387613",
+        "size": 586
+      },
+      ".github/ISSUE_TEMPLATE/bug_report.md": {
+        "text": "---\nname: Bug report\nabout: Create a report to help us improve\ntitle: ''\nlabels: bug\nassignees: ''\n---\n\n**Describe the bug**\nA clear and concise description of what the bug is.\n\n**To Reproduce**\nSteps to reproduce the behavior:\n1. Initialize limiter with...\n2. Call Allow() with...\n3. See error\n\n**Expected behavior**\nA clear and concise description of what you expected to happen.\n\n**Environment:**\n - Go Version: [e.g. 1.24.5]\n - Redis Version: [e.g. 7.0]\n - OS: [e.g. Ubuntu 22.04]\n",
+        "blob_sha": "f30cefeea491bab8130bcd1abb7a532b7755b686",
+        "size": 485
+      },
+      "CONTRIBUTING.md": {
+        "text": "# Contributing to Gateway Rate Limiter\n\nFirst off, thank you for considering contributing to this project! It's people like you that make the open-source community such an amazing place to learn, inspire, and create.\n\n## How Can I Contribute?\n\n### 1. Reporting Bugs\n- Ensure the bug was not already reported by searching on GitHub under Issues.\n- If you're unable to find an open issue addressing the problem, open a new one. Be sure to include a title and clear description, as well as a code sample or an executable test case demonstrating the expected behavior that is not occurring.\n\n### 2. Suggesting Enhancements\n- Open a new issue with a clear title and detailed description.\n- Explain why this enhancement would be useful to most users.\n\n### 3. Pull Requests\nWe love PRs! Here is the workflow we recommend:\n\n1. Fork the repo and create your branch from `main`.\n2. Test your changes. We have a high bar for stability.\n3. Lint your code using `golangci-lint` or standard `go fmt`.\n4. Submit that PR.\n\n## Development Guidelines\n\n### 1. Style & Linting\n- We follow standard Go idioms (Effective Go).\n- Run `gofmt -s -w .` before committing.\n- Ensure your code passes the linter (if applicable) and has no ineffectual assignments.\n\n### 2. Testing Requirements (Strict)\nThis library is used in high-throughput hot paths. We cannot accept PRs that break stability.\n\n- Unit Tests: Any new logic must be covered by a unit test.\n- Race Detection: Run tests with the race detector enabled.\n\n```bash\nREDIS_ADDR=localhost:6379 REQUIRE_REDIS=1 go test -v -race -count=1 ./...\n```\n\n- Allocations: If you modify the MemoryLimiter or the hot path of RedisLimiter, please run benchmarks to ensure no unnecessary allocations were added.\n\n```bash\nREDIS_ADDR=localhost:6379 ./scripts/verify.sh\n```\n\nRedis is mandatory in CI. Use a dedicated local Redis instance for integration\ntests; see the README for optional local skip behavior. Benchmark evidence\nincludes environment details and profiles in `evidence/`; avoid publishing a\nlatency number without its workload and execution context.\n\n### 3. Documentation\n- If you add a new public method, you must add a GoDoc comment.\n- If you change the behavior of the limiter, please update the README.md.\n\n## Commit Messages\nWe try to follow the Conventional Commits specification:\n\n- feat: allow custom burst rates\n- fix: handle redis connection timeouts\n- docs: update readme with performance section\n- chore: update dependencies\n\n## License\nBy contributing, you agree that your contributions will be licensed under its MIT License.\n",
+        "blob_sha": "e50985d982490472c1e7bca14636bd1e4d580082",
+        "size": 2566
+      },
+      "cmd/example-server/main.go": {
+        "text": "package main\n\nimport (\n\t\"fmt\"\n\t\"log\"\n\t\"math\"\n\t\"net\"\n\t\"net/http\"\n\t\"os\"\n\t\"time\"\n\n\t\"github.com/manenim/gateway-rate-limiter\"\n\t\"github.com/redis/go-redis/v9\"\n)\n\nfunc main() {\n\tredisAddr := os.Getenv(\"REDIS_ADDR\")\n\tif redisAddr == \"\" {\n\t\tredisAddr = \"localhost:6379\"\n\t}\n\n\topts := &redis.Options{Addr: redisAddr, ContextTimeoutEnabled: true}\n\tclient := redis.NewClient(opts)\n\tdefer client.Close()\n\n\tl, err := limiter.NewRedisLimiter(client,\n\t\tlimiter.WithPrefix(\"demo:\"),\n\t\tlimiter.WithTimeout(100*time.Millisecond),\n\t)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\n\thttp.Handle(\"/ping\", pingHandler(l))\n\n\tlog.Printf(\"Server listening on :8080 (Redis: %s)\", redisAddr)\n\tlog.Fatal(http.ListenAndServe(\":8080\", nil))\n}\n\n// The demo enforces a quota per directly connected IP. Deployments behind a\n// proxy need a trusted proxy policy before using forwarded identity headers.\nfunc pingHandler(l limiter.RateLimiter) http.Handler {\n\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tip, _, err := net.SplitHostPort(r.RemoteAddr)\n\t\tif err != nil {\n\t\t\thttp.Error(w, \"Invalid client address\", http.StatusBadRequest)\n\t\t\treturn\n\t\t}\n\t\tid := limiter.Identity{Namespace: \"ip\", Key: ip}\n\t\tlimit := limiter.Limit{Rate: 5, Period: time.Second, Burst: 10}\n\t\tdec, err := l.Allow(r.Context(), id, limit)\n\t\tif err != nil {\n\t\t\t// This demonstration explicitly chooses fail open on Redis errors.\n\t\t\tlog.Printf(\"Limiter error: %v\", err)\n\t\t} else if !dec.Allow {\n\t\t\tw.Header().Set(\"Retry-After\", fmt.Sprintf(\"%.0f\", math.Ceil(dec.RetryAfter.Seconds())))\n\t\t\tw.WriteHeader(http.StatusTooManyRequests)\n\t\t\t_, _ = w.Write([]byte(\"Rate limit exceeded\\n\"))\n\t\t\treturn\n\t\t}\n\t\t_, _ = w.Write([]byte(\"Pong!\\n\"))\n\t})\n}\n",
+        "blob_sha": "b7385a0b8c1913984332bd4f519f826ba0475992",
+        "size": 1692
+      },
+      "benchmark_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"testing\"\n\t\"time\"\n)\n\n// Explicit states keep the benchmark from silently changing from allowed to\n// denied once a finite burst is exhausted during a longer measurement.\nfunc BenchmarkMemoryLimiter_Decisions(b *testing.B) {\n\tfor _, allowed := range []bool{true, false} {\n\t\tb.Run(fmt.Sprintf(\"allowed=%t\", allowed), func(b *testing.B) {\n\t\t\tlimiter := NewMemoryLimiter()\n\t\t\tctx := context.Background()\n\t\t\tid := Identity{Namespace: \"benchmark\", Key: \"shared\"}\n\t\t\tlimit := Limit{Rate: 1, Period: 24 * time.Hour, Burst: 1}\n\t\t\tif allowed {\n\t\t\t\tlimit = Limit{Rate: 1_000_000_000, Period: time.Second, Burst: 1_000_000_000}\n\t\t\t}\n\t\t\t_, _ = limiter.Allow(ctx, id, limit)\n\t\t\tb.ReportAllocs()\n\t\t\tfor b.Loop() {\n\t\t\t\tdec, err := limiter.Allow(ctx, id, limit)\n\t\t\t\tif err != nil || dec.Allow != allowed {\n\t\t\t\t\tb.Fatalf(\"decision = %+v, err = %v\", dec, err)\n\t\t\t\t}\n\t\t\t}\n\t\t})\n\t}\n}\n\nfunc BenchmarkMemoryLimiter_ParallelSharedBucket(b *testing.B) {\n\tlimiter := NewMemoryLimiter()\n\tctx := context.Background()\n\tid := Identity{Namespace: \"benchmark\", Key: \"shared\"}\n\tlimit := Limit{Rate: 1_000_000_000, Period: time.Second, Burst: 1_000_000_000}\n\t_, _ = limiter.Allow(ctx, id, limit)\n\tb.ReportAllocs()\n\tb.ResetTimer()\n\tb.RunParallel(func(pb *testing.PB) {\n\t\tfor pb.Next() {\n\t\t\tdec, err := limiter.Allow(ctx, id, limit)\n\t\t\tif err != nil || !dec.Allow {\n\t\t\t\tb.Errorf(\"decision = %+v, err = %v\", dec, err)\n\t\t\t\treturn\n\t\t\t}\n\t\t}\n\t})\n}\n",
+        "blob_sha": "baf5b650024fedc606d80dfb384eaf7ba40eea15",
+        "size": 1451
+      },
+      "README.md": {
+        "text": "# Distributed Rate Limiter\n\n[![Go Report Card](https://goreportcard.com/badge/github.com/manenim/gateway-rate-limiter)](https://goreportcard.com/report/github.com/manenim/gateway-rate-limiter) [![CI](https://github.com/manenim/gateway-rate-limiter/actions/workflows/ci.yml/badge.svg)](https://github.com/manenim/gateway-rate-limiter/actions/workflows/ci.yml) [![GoDoc](https://godoc.org/github.com/manenim/gateway-rate-limiter?status.svg)](https://pkg.go.dev/github.com/manenim/gateway-rate-limiter) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)\n\nA Redis-backed, distributed token bucket rate limiter for Go.\n\nThis repo ships:\n\n- A reusable library (root `limiter` package) with a small, testable API\n- A Redis Lua script embedded in the binary for atomic token-bucket updates\n- A runnable example server (`cmd/example-server`)\n- Mermaid diagrams in `docs/`\n\n## Contents\n\n- [Distributed Rate Limiter](#distributed-rate-limiter)\n  - [Contents](#contents)\n  - [Features](#features)\n  - [Requirements](#requirements)\n  - [Installation](#installation)\n  - [Quick start (Redis-backed)](#quick-start-redis-backed)\n  - [Core Concepts](#core-concepts)\n    - [Core types](#core-types)\n    - [Interface + implementations](#interface--implementations)\n    - [Redis key format](#redis-key-format)\n  - [Usage patterns](#usage-patterns)\n    - [In-memory limiter (tests / single-instance)](#in-memory-limiter-tests--single-instance)\n    - [HTTP integration (returning 429)](#http-integration-returning-429)\n    - [Fail open vs fail closed](#fail-open-vs-fail-closed)\n  - [Configuration](#configuration)\n  - [Observability (metrics)](#observability-metrics)\n  - [How it works](#how-it-works)\n    - [Token bucket (conceptual)](#token-bucket-conceptual)\n    - [Redis atomic update (implementation)](#redis-atomic-update-implementation)\n    - [Redis data model](#redis-data-model)\n  - [Architecture](#architecture)\n  - [Sequence](#sequence)\n  - [Example server](#example-server)\n  - [Docker](#docker)\n  - [Testing](#testing)\n  - [Performance](#performance)\n    - [Reproduce benchmarks and profiles](#reproduce-benchmarks-and-profiles)\n  - [Operational boundaries](#operational-boundaries)\n\n## Features\n\n- **Redis-backed distributed state**: enforce one global limit across many app instances.\n- **Atomicity via Lua**: token refill + deduction happens server-side as a single atomic operation.\n- **Context support**: `Allow()` passes the caller context to go-redis; configure `ContextTimeoutEnabled` to apply deadlines to network I/O.\n- **Pluggable metrics**: bring your own Prometheus/DataDog/Otel adapter via a tiny interface.\n- **In-memory implementation**: dependency-free `MemoryLimiter` for tests and local dev.\n\n## Requirements\n\n- Go `1.24.5` (see `go.mod`)\n- Redis (only required for `RedisLimiter`; `MemoryLimiter` is dependency-free)\n\n## Installation\n\n```bash\ngo get github.com/manenim/gateway-rate-limiter\n```\n\nImport the library package:\n\n```go\nimport \"github.com/manenim/gateway-rate-limiter\"\n```\n\nIf you prefer to be explicit about versions:\n\n```bash\ngo get github.com/manenim/gateway-rate-limiter@latest\n```\n\n## Quick start (Redis-backed)\n\n```go\nclient := redis.NewClient(&redis.Options{\n    Addr: \"localhost:6379\",\n    ContextTimeoutEnabled: true, // apply caller deadlines to network I/O\n})\n\nl, err := limiter.NewRedisLimiter(\n    client,\n    limiter.WithPrefix(\"myapp:\"), // Redis key prefix (optional)\n)\nif err != nil {\n    // Redis unreachable or SCRIPT LOAD failed\n    log.Fatal(err)\n}\n\nid := limiter.Identity{Namespace: \"user\", Key: \"123\"}\nlimit := limiter.Limit{Rate: 10, Period: time.Second, Burst: 20}\n\ndec, err := l.Allow(ctx, id, limit)\nif err != nil {\n    // Choose your policy: fail-open (availability) or fail-closed (protection)\n    return\n}\nif !dec.Allow {\n    // e.g., in HTTP: return 429\n    return\n}\n```\n\n> Note: Each `Allow()` call currently has a fixed cost of **1 token**.\n\n## Core Concepts\n\n### Core types\n\n- `Limit{Rate, Period, Burst}`: policy definition (tokens per `Period`, with max capacity `Burst`).\n- `Identity{Namespace, Key}`: who you are rate limiting (user, api key, ip, tenant, ...).\n- `Decision{Allow, Remaining, RetryAfter, ResetTime}`: result + timing hints for callers.\n\n### Interface + implementations\n\n```mermaid\nclassDiagram\n    class RateLimiter {\n        <<interface>>\n        +Allow(ctx, id, limit)\n    }\n    class RedisLimiter\n    class MemoryLimiter\n\n    RateLimiter <|.. RedisLimiter\n    RateLimiter <|.. MemoryLimiter\n```\n\n### Redis key format\n\nBy default, Redis keys are:\n\n```\nlimiter:<namespace>:<key>\n```\n\nYou can override the prefix via `WithPrefix(\"myapp:\")`.\n\n## Usage patterns\n\n### In-memory limiter (tests / single-instance)\n\n```go\nl := limiter.NewMemoryLimiter()\n\nid := limiter.Identity{Namespace: \"user\", Key: \"123\"}\nlimit := limiter.Limit{Rate: 10, Period: time.Second, Burst: 10}\n\ndec, err := l.Allow(context.Background(), id, limit)\nif err != nil {\n    panic(err)\n}\n_ = dec\n```\n\n### HTTP integration (returning 429)\n\n```go\n// Optional: put an upper-bound on Redis time per request.\nctx, cancel := context.WithTimeout(r.Context(), 50*time.Millisecond)\ndefer cancel()\n\ndec, err := l.Allow(ctx, id, limit)\nif err != nil {\n    // Choose your policy:\n    // - fail closed: w.WriteHeader(429/503); return\n    // - fail open: continue to serve the request\n}\nif !dec.Allow {\n    // Retry-After uses whole seconds in HTTP; rounding up is typical.\n    w.Header().Set(\"Retry-After\", fmt.Sprintf(\"%.0f\", math.Ceil(dec.RetryAfter.Seconds())))\n    w.WriteHeader(http.StatusTooManyRequests)\n    return\n}\n```\n\n### Fail open vs fail closed\n\nThis library returns errors; it does not force a policy. In your application you typically pick:\n\n- **Fail closed** when you must protect an upstream (strict quota enforcement).\n- **Fail open** when availability matters more than perfect limiting.\n\n## Configuration\n\n`NewRedisLimiter` uses the functional options pattern:\n\n```go\nl, err := limiter.NewRedisLimiter(\n    client,\n    limiter.WithPrefix(\"myapp:rate:\"),\n    limiter.WithTimeout(2*time.Second),\n    limiter.WithRecorder(myMetrics),\n)\n```\n\nSupported options:\n\n- `WithPrefix(string)` (default: `limiter:`)\n- `WithTimeout(time.Duration)` (default: `5s`, used by `NewRedisLimiter` during `PING` and `SCRIPT LOAD`)\n- `WithRecorder(MetricsRecorder)` (default: `NoOpMetricsRecorder`)\n\n## Observability (metrics)\n\nTo avoid locking you into a specific telemetry stack, the library exposes a tiny interface:\n\n```go\ntype MetricsRecorder interface {\n    Add(name string, value float64, tags map[string]string)\n    Observe(name string, value float64, tags map[string]string)\n}\n```\n\nThe Redis-backed limiter emits:\n\n- Counter: `ratelimit.call` with tags `{namespace, status=allowed|denied}`\n- Counter: `ratelimit.errors` with tags `{namespace, type=redis_eval|invalid_format}`\n- Histogram/Distribution: `ratelimit.latency` (seconds) with tags `{namespace, status=allowed|denied|error}`\n\n`MetricsRecorder` methods are called inline as part of `Allow()`. Keep your implementation fast (or make it non-blocking) to avoid adding latency to admission checks. It must also be safe for concurrent use when the limiter is shared across goroutines.\n\n## How it works\n\n### Token bucket (conceptual)\n\n`Limit` is a token-bucket policy:\n\n- Refill rate: `Rate / Period` tokens per second\n- Capacity: `Burst` tokens\n- Cost per request: `1` token\n\n```mermaid\nflowchart LR\n    Req[\"Request\"] --> Check{\"Tokens >= 1?\"}\n    Check -- Yes --> Consume[\"Consume 1 token\"] --> Allow[\"Allow\"]\n    Check -- No --> Deny[\"Deny\"] --> Hint[\"RetryAfter / ResetTime hints\"]\n\n    Refill[\"Time passes\"] --> Add[\"Add tokens at rate\"] --> Cap[\"Cap at Burst\"]\n    Add --> Check\n    Cap --> Check\n```\n\n### Redis atomic update (implementation)\n\nFor each `Allow()` call, the limiter runs an embedded Lua script via `EVALSHA`:\n\n- Reads `{tokens, last_refill}` for the identity\n- Computes refill since `last_refill`\n- Deducts `cost=1` if possible\n- Writes the updated state (on allow) and sets a TTL to avoid key leaks\n- Returns `{allowed, remaining, retry_after, reset_time}`\n\n```mermaid\nflowchart TD\n    A[\"Allow(ctx, id, limit)\"] --> B[\"EVALSHA token_bucket.lua\"]\n    B --> C[\"HMGET tokens,last_refill\"]\n    C --> D[\"Compute refill + cap\"]\n    D --> E{\"tokens >= cost?\"}\n    E -- yes --> F[\"HMSET tokens,last_refill\"]\n    F --> G[\"EXPIRE key ttl\"]\n    E -- no --> H[\"No write\"]\n    G --> I[\"Return Decision\"]\n    H --> I[\"Return Decision\"]\n```\n\n### Redis data model\n\nEach identity maps to a single Redis key holding a hash:\n\n```mermaid\nflowchart TD\n    K[\"key = {prefix}{namespace}:{key}\"] --> H[\"Redis Hash\"]\n    H --> T[\"tokens (float)\"]\n    H --> R[\"last_refill (unix seconds, float)\"]\n    K --> X[\"TTL ~= ceil(2 * (Burst / refill_rate))\"]\n```\n\n## Architecture\n\nFull diagram: `docs/architecture.md`\n\n```mermaid\ngraph TD\n    Client[\"Client Traffic\"] --> LB[\"Load Balancer\"]\n\n    subgraph \"Application Cluster\"\n        NodeA[\"App Instance A\"]\n        NodeB[\"App Instance B\"]\n        NodeC[\"App Instance C\"]\n    end\n\n    LB --> NodeA\n    LB --> NodeB\n    LB --> NodeC\n\n    subgraph \"Shared State\"\n        Redis[\"Redis Primary\"]\n    end\n\n    NodeA -- \"Allow()\" --> Redis\n    NodeB -- \"Allow()\" --> Redis\n    NodeC -- \"Allow()\" --> Redis\n\n    note[\"Lua script ensures atomic token deduction\"]\n    Redis --- note\n```\n\n## Sequence\n\nFull diagram: `docs/sequence.md`\n\n```mermaid\nsequenceDiagram\n    participant App\n    participant Limiter as RedisLimiter\n    participant Metrics as MetricsRecorder\n    participant Redis as Redis Server\n\n    App->>Limiter: Allow(ctx, id, limit)\n    activate Limiter\n\n    Limiter->>Limiter: Start Timer\n\n    rect rgb(200, 255, 200)\n    Note right of Limiter: Network I/O\n    Limiter->>Redis: EVALSHA (Token Bucket)\n\n    Redis-->>Limiter: {allowed, remaining, retry_after, reset_time}\n    end\n\n    Limiter->>Metrics: Add(\"ratelimit.call\", ...)\n    Limiter->>Metrics: Add(\"ratelimit.errors\", ...) (if applicable)\n\n    Limiter-->>App: Decision {Allow: true/false, ...}\n\n    deactivate Limiter\n    Limiter->>Metrics: Observe(\"ratelimit.latency\", duration)\n```\n\n## Example server\n\nThe repo includes a minimal HTTP server that demonstrates how to apply the limiter to an endpoint:\n\n- Entry point: `cmd/example-server/main.go`\n- Endpoint: `GET /ping`\n- Identity: `Namespace=\"ip\"`, `Key=client IP` parsed from `r.RemoteAddr` (IPv4 or IPv6; excludes the source port)\n- Error policy: fail open on Redis errors; denied requests return 429 with a whole-second `Retry-After`\n- Proxy use: the demo uses the direct peer IP; configure a trusted proxy policy before accepting forwarded headers\n- Env var: `REDIS_ADDR` (default `localhost:6379`)\n\nRun locally:\n\n```bash\ndocker run --rm -p 6379:6379 redis:7-alpine\nREDIS_ADDR=localhost:6379 go run ./cmd/example-server\ncurl -i http://localhost:8080/ping\n```\n\n## Docker\n\nBuild the example server image:\n\n```bash\ndocker build -t rate-limiter-example .\n```\n\nRun Redis + the example server on a shared Docker network:\n\n```bash\ndocker network create rl-demo || true\ndocker run -d --name rl-redis --network rl-demo redis:7-alpine\n\ndocker run --rm --network rl-demo -p 8080:8080 \\\n  -e REDIS_ADDR=rl-redis:6379 \\\n  rate-limiter-example\n```\n\n## Testing\n\nRun tests with the race detector:\n\n```bash\ngo test -v -race ./...\n```\n\nRedis tests use `REDIS_ADDR` (default `localhost:6379`) and skip when Redis is\nunavailable. Set `REQUIRE_REDIS=1` to fail instead. CI requires a Redis 7 service,\nso a passing CI run cannot silently omit integration coverage.\n\n```bash\ndocker run --rm -p 16379:6379 redis:7-alpine\nREDIS_ADDR=localhost:16379 REQUIRE_REDIS=1 go test -v -race -count=1 ./...\n```\n\nUse a dedicated Redis instance. Tests use unique prefixes and clean up their own\nkeys; they never flush the database or the shared script cache. Coverage includes\n256 concurrent requests from eight independent Redis clients sharing one bucket,\nallowed/denied/error metric tags, closed connections, wrong Redis key types,\nmissing scripts, and cancellation/deadlines. A deterministic initialization\nfailure test also runs without Redis.\n\n## Performance\n\nPerformance depends on the machine, Go version, workload, connection pool, Redis\nplacement, and contention. The library does not promise a fixed latency or\nthroughput. Recorded local results and their scope are in\n[the benchmark evidence](docs/performance.md).\n\n### Reproduce benchmarks and profiles\n\nWith Redis running, collect tests, three benchmark samples, CPU/heap profiles,\nand a mutex profile of one shared in-memory bucket:\n\n```bash\nREDIS_ADDR=localhost:16379 GOMAXPROCS=4 ./scripts/verify.sh\n```\n\nOutputs go to `evidence/` (ignored by Git). CI uploads the same files as the\n`rate-limiter-evidence` artifact. The script records the environment, makes Redis\nmandatory, runs the race detector and ten contention repetitions, and keeps\nprofiling runs separate from timing measurements. Benchmarks explicitly check\nallowed and denied paths; initialization and first-bucket setup are excluded.\n\nFor an individual benchmark:\n\n```bash\nREQUIRE_REDIS=1 go test -run '^$' -bench . -benchmem -benchtime=1s -count=3 .\ngo tool pprof -http=localhost:8081 evidence/limiter.test evidence/cpu.pprof\n```\n\n## Operational boundaries\n\n- Lua provides atomic updates on one Redis primary. Redis persistence, failover,\n  and connection failures remain deployment concerns. Errors return a zero\n  decision and an error; the application chooses fail open or fail closed.\n- Redis script cache loss (for example, a restart) returns `NOSCRIPT`. The current\n  implementation does not reload automatically; construct a new limiter after\n  Redis recovers. Constructor timeouts apply to initialization only.\n- Refill uses the application clock. Replicas should have synchronized clocks;\n  the script clamps negative elapsed time but does not eliminate forward skew.\n- Policies should have positive `Rate`, `Period`, and `Burst`. The current API\n  assumes trusted, valid configuration. `MemoryLimiter` stores buckets for the\n  life of the process and does not honor context cancellation.\n- `RetryAfter` indicates the next available token when denied. `ResetTime` is the\n  current check time on allowance and the next-token time on denial; it is not\n  the time when the bucket becomes completely full.\n",
+        "blob_sha": "2c1d284264cd5f98a1974836de7df2a3ae204f96",
+        "size": 14310
+      },
+      "doc.go": {
+        "text": "// Package limiter provides local and distributed rate limiting based on the\n// Token Bucket algorithm.\n//\n// The primary entry point is the RateLimiter interface:\n//\n//\tdec, err := limiter.Allow(ctx, id, limit)\n//\n// The returned Decision contains whether the request is allowed, how many whole\n// tokens remain, and timing hints for callers that want to set rate-limit\n// headers (for example, Retry-After).\n//\n// # Overview\n//\n// This package implements a Token Bucket:\n//\n//   - Each identity has a \"bucket\" holding tokens.\n//   - The bucket refills over time up to a maximum capacity (Burst).\n//   - Each Allow call consumes 1 token when available.\n//\n// Unlike fixed-window counters, token buckets naturally support bursts while\n// still enforcing a long-term average rate.\n//\n// # Core Types\n//\n// Limit defines the policy:\n//\n//   - Rate: tokens earned per Period (for example, 10 per second or 60 per\n//     minute)\n//   - Period: the time window Rate is measured over\n//   - Burst: maximum number of tokens the bucket can hold (also the maximum\n//     immediate burst)\n//\n// Identity defines \"who\" is being rate-limited. It is split into:\n//\n//   - Namespace: a logical grouping (for example, \"user\", \"ip\", \"api_key\")\n//   - Key: the identifier within that namespace (for example, \"user_123\")\n//\n// # Backends\n//\n// The package provides two implementations with the same Allow API:\n//\n//   - MemoryLimiter: an in-process limiter backed by a Go map. This is useful\n//     for unit tests, local development, and single-instance deployments.\n//     Because its state is local to the process, it does not enforce a global\n//     limit across multiple replicas.\n//\n//   - RedisLimiter: a distributed limiter backed by Redis. It uses a Lua script\n//     to perform the read/compute/write cycle atomically, which makes it safe to\n//     use across many application instances while enforcing a single global\n//     budget per identity.\n//\n// Recommendation: use RedisLimiter in production when you need a global limit,\n// and MemoryLimiter in tests (as a fast, dependency-free stand-in).\n//\n// # Concurrency\n//\n// MemoryLimiter is safe for concurrent use by multiple goroutines (it uses a\n// mutex to protect its internal map and per-identity state). RedisLimiter\n// delegates concurrency safety to Redis and the go-redis client.\n//\n// # Context and Error Policy\n//\n// Allow accepts a context.Context. RedisLimiter passes this context through to\n// Redis operations so callers can enforce deadlines and cancel work to avoid\n// cascading failures during partial outages.\n//\n// This package does not impose a \"fail open\" vs \"fail closed\" policy. If Redis\n// is unavailable or the context expires, Allow returns a non-nil error and the\n// caller decides whether to deny traffic (protect the backend) or allow traffic\n// (maximize availability).\n//\n// # Decision Semantics\n//\n// Decision fields are intended to be directly consumable by application code:\n//\n//   - Allow reports whether the current request is permitted.\n//   - Remaining is the number of whole tokens remaining after the decision is\n//     applied (floored to an int64).\n//   - RetryAfter is 0 when allowed; when denied it is the approximate duration\n//     until a single token is expected to be available.\n//   - ResetTime is the absolute timestamp corresponding to time.Now()+RetryAfter.\n//\n// # Usage\n//\n// For a runnable example using MemoryLimiter, see ExampleMemoryLimiter in\n// example_test.go.\n//\n// # Storage Details\n//\n// MemoryLimiter stores state in a process-local map keyed by:\n//\n//\t\"{namespace}:{key}\"\n//\n// RedisLimiter stores state in Redis under keys prefixed with \"limiter:\" and\n// uses a Redis hash with two fields:\n//\n//   - \"tokens\": current token balance (float)\n//   - \"last_refill\": last update time as seconds since epoch (float)\n//\n// Redis keys are set to expire to avoid leaking memory for identities that stop\n// sending requests.\n//\n// # Limitations and Notes\n//\n//   - MemoryLimiter does not evict old identities; for long-lived processes with\n//     high-cardinality keys you likely want RedisLimiter or a custom in-memory\n//     store with TTL/LRU eviction.\n//   - RedisLimiter requires a reachable Redis instance and returns errors\n//     directly; callers must decide their availability vs protection tradeoff.\n//   - This package currently models each Allow call as a cost of 1 token.\n//   - RedisLimiter uses EVALSHA; if Redis is restarted and script cache is\n//     cleared, Allow may return a NOSCRIPT error until the script is reloaded\n//     (recreating the limiter via NewRedisLimiter will load it).\n//\n// # Configuration\n//\n// RedisLimiter is configured using the Functional Options pattern:\n//\n//\tlimiter, _ := NewRedisLimiter(client,\n//\t\tWithPrefix(\"myapp:rate:\"),\n//\t\tWithTimeout(2*time.Second),\n//\t\tWithRecorder(myMetrics),\n//\t)\n//\n// Supported options:\n//\n//   - WithPrefix(string): Sets the key prefix (default \"limiter:\").\n//   - WithTimeout(time.Duration): Sets the context timeout for Redis operations\n//     (default 5s).\n//   - WithRecorder(MetricsRecorder): Injects a custom metrics backend.\npackage limiter\n",
+        "blob_sha": "887c50ae720e4bc689134e554aaf95ad8f402ec8",
+        "size": 5131
+      },
+      "cmd/example-server/main_test.go": {
+        "text": "package main\n\nimport (\n\t\"context\"\n\t\"errors\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\t\"time\"\n\n\tlimiter \"github.com/manenim/gateway-rate-limiter\"\n)\n\ntype stubLimiter struct {\n\tdecision limiter.Decision\n\terr      error\n\tids      []limiter.Identity\n}\n\nfunc (l *stubLimiter) Allow(_ context.Context, id limiter.Identity, _ limiter.Limit) (limiter.Decision, error) {\n\tl.ids = append(l.ids, id)\n\treturn l.decision, l.err\n}\n\nfunc TestPingHandler_ClientIPIdentity(t *testing.T) {\n\tl := &stubLimiter{decision: limiter.Decision{Allow: true}}\n\thandler := pingHandler(l)\n\tfor _, addr := range []string{\"192.0.2.1:12345\", \"192.0.2.1:54321\", \"[2001:db8::1]:12345\"} {\n\t\tr := httptest.NewRequest(http.MethodGet, \"/ping\", nil)\n\t\tr.RemoteAddr = addr\n\t\tr.Header.Set(\"X-Forwarded-For\", \"spoofed.example\")\n\t\tw := httptest.NewRecorder()\n\t\thandler.ServeHTTP(w, r)\n\t\tif w.Code != http.StatusOK {\n\t\t\tt.Fatalf(\"status = %d\", w.Code)\n\t\t}\n\t}\n\tif l.ids[0] != l.ids[1] || l.ids[0].Key != \"192.0.2.1\" || l.ids[2].Key != \"2001:db8::1\" {\n\t\tt.Fatalf(\"identities = %+v\", l.ids)\n\t}\n}\n\nfunc TestPingHandler_DenialAndFailurePolicy(t *testing.T) {\n\tfor _, tc := range []struct {\n\t\tname       string\n\t\tdecision   limiter.Decision\n\t\terr        error\n\t\tstatus     int\n\t\tretryAfter string\n\t}{\n\t\t{\"denied\", limiter.Decision{RetryAfter: 1250 * time.Millisecond}, nil, http.StatusTooManyRequests, \"2\"},\n\t\t{\"dependency failure\", limiter.Decision{}, errors.New(\"Redis unavailable\"), http.StatusOK, \"\"},\n\t} {\n\t\tt.Run(tc.name, func(t *testing.T) {\n\t\t\tl := &stubLimiter{decision: tc.decision, err: tc.err}\n\t\t\tr := httptest.NewRequest(http.MethodGet, \"/ping\", nil)\n\t\t\tr.RemoteAddr = \"192.0.2.1:12345\"\n\t\t\tw := httptest.NewRecorder()\n\t\t\tpingHandler(l).ServeHTTP(w, r)\n\t\t\tif w.Code != tc.status || w.Header().Get(\"Retry-After\") != tc.retryAfter {\n\t\t\t\tt.Fatalf(\"status=%d Retry-After=%q\", w.Code, w.Header().Get(\"Retry-After\"))\n\t\t\t}\n\t\t})\n\t}\n}\n",
+        "blob_sha": "5524f53d235bcae4760618e7b2b50a894c4b1c65",
+        "size": 1890
+      },
+      "docs/architecture.md": {
+        "text": "# System Architecture\n\nHow the Distributed Rate Limiter works across multiple nodes.\n\n```mermaid\ngraph TD\n    Client((Client Traffic)) --> LB[Load Balancer]\n    \n    subgraph \"Application Cluster\"\n        NodeA[App Instance A]\n        NodeB[App Instance B]\n        NodeC[App Instance C]\n    end\n    \n    LB --> NodeA\n    LB --> NodeB\n    LB --> NodeC\n    \n    subgraph \"Shared State\"\n        Redis[(Redis Primary)]\n    end\n    \n    NodeA -- \"Allow()\" --> Redis\n    NodeB -- \"Allow()\" --> Redis\n    NodeC -- \"Allow()\" --> Redis\n    \n    note[The <br/><b>Lua Script</b><br/> ensures atomic <br/>token deduction]\n    Redis --- note\n```\n",
+        "blob_sha": "ea2def8e761a4d9d8dfd5d7b6e814f957b6c3d00",
+        "size": 633
+      },
+      "docs/performance.md": {
+        "text": "# Benchmark and verification evidence\n\nThis is a local measurement record, not a latency guarantee or an application\nthroughput estimate. The previous README's 76.4 ns/op, zero-allocation, sub-50 µs\nLua, and sub-1 ms Redis claims lacked a reproducible recorded context; they have\nbeen replaced with executed evidence.\n\n## Environment and command\n\nRun date: 2026-10-03. Source: the working-tree changes in this PR based on\n`8f00ea9`; the [environment record](benchmark-records/2026-10-03/environment.txt)\nincludes the base commit and dirty-file list. The Go source measured here is the\nbenchmark/test/example implementation in this PR.\n\n- Go `go1.27.0`, Linux amd64, Ubuntu 24.04; kernel `7.0.0-34-generic`.\n- Intel Core i7-8665U, four physical cores/eight logical CPUs; `GOMAXPROCS=4`.\n- Redis `7.0.15`, standalone, local TCP `127.0.0.1:16379`, jemalloc 5.3.0,\n  persistence disabled (`--save '' --appendonly no`), no TLS.\n- go-redis `v9.17.3`; no-op metrics recorder, retries disabled in test clients.\n- Shared development laptop with other workloads running. This is not an\n  isolated performance lab; power state and load were not controlled.\n\nThe local Redis binary came from Ubuntu's Redis packages extracted into a\ntemporary directory, without a system installation. A container is an alternative:\n\n```bash\ndocker run --rm -p 16379:6379 redis:7-alpine\nREDIS_ADDR=127.0.0.1:16379 GOMAXPROCS=4 ./scripts/verify.sh\n```\n\nA `redis:7-alpine` image can have a different patch version and allocator from\nthis run. The test log records the actual Redis version. CI uses Go 1.24.x and\nRedis 7; its artifacts are separate measurements, not directly interchangeable\nwith this Go 1.27 local run.\n\n## Three measured samples per workload\n\nCommands: `go test -run '^$' -bench . -benchmem -benchtime=1s -count=3 .`\nwith the environment above. [Full raw benchmark output](benchmark-records/2026-10-03/benchmarks.txt).\n\n| Workload | ns/op, three samples | B/op | allocs/op |\n| --- | --- | --- | --- |\n| Memory, allowed | 190.8 / 182.6 / 181.5 | 16 | 1 |\n| Memory, denied | 229.6 / 211.0 / 164.5 | 16 | 1 |\n| Memory, parallel shared bucket | 228.6 / 200.5 / 202.4 | 16 | 1 |\n| Redis, allowed, sequential | 78,464 / 72,371 / 86,828 | 1,279 | 23 |\n| Redis, denied, sequential | 69,389 / 68,595 / 102,453 | 1,279 / 1,279 / 1,271 | 21 |\n\nEach benchmark repeatedly checks one initialized identity. Allowed cases use a\nlarge burst/high refill rate and assert allowance on every operation. Denied\ncases consume the initial token first and use a one-day refill period. Bucket\ncreation and Redis script loading are outside the timed loop. The parallel\nmemory case uses `RunParallel` against one bucket with four workers by default.\n\nThese Redis numbers include client/network/response decoding and inline metrics\nhooks. They do not measure Redis-side Lua execution time or p95/p99 HTTP request\nlatency. Redis parallel throughput, high-cardinality identities, failover, and\ncross-host networks have not been benchmarked here. The memory implementation's\nglobal mutex also serializes different identities.\n\n## Profiles from separate runs\n\n`verify.sh` executes CPU and heap profiling for the allowed/denied memory paths\nand mutex profiling for the parallel shared bucket. Profile-run timings are not\nincluded in the sample table.\n\n- [CPU top](benchmark-records/2026-10-03/cpu-top.txt): 6.72 seconds of samples;\n  `time.runtimeNow` accounts for 20.83% flat and `runtime.concatstrings` for\n  11.31% flat. String concatenation and allocation are visible costs in this run.\n- [Heap allocation top](benchmark-records/2026-10-03/heap-top.txt): sampled\n  allocation space attributes 465.51 MB (99.31%) to `MemoryLimiter.Allow` across\n  the profiling run. This is cumulative allocated space, not retained memory or\n  a per-request measurement; the benchmark reports 16 B/op and one allocation.\n- [Mutex top](benchmark-records/2026-10-03/mutex-top.txt): sampled aggregate mutex\n  delay is 4.47 seconds, attributed to the lock's release in `MemoryLimiter.Allow`.\n  Delay sums across workers and is not the latency of one request.\n\nThe script writes raw `.pprof` files and the test executable into `evidence/`.\nThey are ignored locally and uploaded with CI artifacts; the committed text\nrecords above preserve this run's output. Inspect freshly generated profiles:\n\n```bash\ngo tool pprof -http=localhost:8081 evidence/limiter.test evidence/cpu.pprof\ngo tool pprof -alloc_space evidence/limiter.test evidence/heap.pprof\ngo tool pprof evidence/limiter.test evidence/mutex.pprof\n```\n\n## Correctness checks executed\n\n[Full race-test log](benchmark-records/2026-10-03/tests.txt) and\n[ten-repeat contention output](benchmark-records/2026-10-03/contention.txt)\nrecord successful checks with Redis available. No integration tests skipped.\n`go vet ./...` completed with no findings.\n\nThe contention test starts 256 requests across eight independent client pools\nsharing a burst of 37 and a one-day refill interval. It checks exactly 37\nallowances, 219 denials, bounded remaining tokens, and positive retry hints.\nThe ten-repeat race run passed. This demonstrates shared-bucket admission\ncorrectness under this workload; it does not establish performance under load.\n\nDependency tests first verify a healthy allowance, then exercise a closed client,\nwrong Redis key type, or a deliberately missing script SHA. They check a zero\nerror decision, error counter tags, and error latency tags. The missing SHA models\nscript-cache loss without flushing a shared Redis instance. This is not a full\nRedis restart/failover simulation. Pre-cancelled/expired contexts, constructor\ndial failure, allowed/denied metric tags, and the example's fail-open behavior\nare also checked.\n\nThe required-Redis guard was separately checked with\n`REDIS_ADDR=127.0.0.1:1 REQUIRE_REDIS=1 go test -run '^TestRedisLimiter_Integration$' -count=1 .`.\nIt exited 1 with `Redis required ... connection refused`, confirming an\nunreachable backend fails rather than skips.\n",
+        "blob_sha": "574a8c4883b68dd16d87bf124e1e921c4f8dea9a",
+        "size": 5990
+      },
+      "example_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n)\n\nfunc ExampleMemoryLimiter() {\n\tl := NewMemoryLimiter()\n\n\tlimit := Limit{\n\t\tRate:   10,\n\t\tPeriod: time.Second,\n\t\tBurst:  10,\n\t}\n\tid := Identity{Namespace: \"user\", Key: \"user_123\"}\n\n\tdec, err := l.Allow(context.Background(), id, limit)\n\tif err != nil {\n\t\tpanic(err)\n\t}\n\n\tfmt.Println(dec.Allow)\n\t// Output:\n\t// true\n}\n",
+        "blob_sha": "26192763f667a77e0150b4c3460d468d5e9158f5",
+        "size": 370
+      },
+      "metrics_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"testing\"\n\t\"time\"\n)\n\n// MockRecorder captures metrics in memory for assertion\ntype MockRecorder struct {\n\tCounters map[string]float64\n\tTimings  map[string][]float64\n}\n\nfunc NewMockRecorder() *MockRecorder {\n\treturn &MockRecorder{\n\t\tCounters: make(map[string]float64),\n\t\tTimings:  make(map[string][]float64),\n\t}\n}\n\nfunc (m *MockRecorder) Add(name string, value float64, tags map[string]string) {\n\tm.Counters[name] += value\n}\n\nfunc (m *MockRecorder) Observe(name string, value float64, tags map[string]string) {\n\tm.Timings[name] = append(m.Timings[name], value)\n}\n\nfunc TestRedisLimiter_Metrics(t *testing.T) {\n\tclient := redisTestClient(t)\n\n\t// 3. Inject Mock Recorder\n\tmock := NewMockRecorder()\n\n\t// 2. Create Limiter with Recorder\n\tlimiter, err := NewRedisLimiter(client, WithRecorder(mock), WithPrefix(redisTestPrefix(t, client)))\n\tif err != nil {\n\t\tt.Fatalf(\"Failed to create limiter: %v\", err)\n\t}\n\n\t// 4. Perform Action\n\tid := Identity{Namespace: \"metrics_test\", Key: \"user_1\"}\n\tlimit := Limit{Rate: 10, Period: time.Second, Burst: 10}\n\n\t_, err = limiter.Allow(context.Background(), id, limit)\n\tif err != nil {\n\t\tt.Fatalf(\"Allow failed: %v\", err)\n\t}\n\n\t// 5. Assertions\n\n\t// Check \"ratelimit.call\" Counter\n\tif val, ok := mock.Counters[\"ratelimit.call\"]; !ok || val != 1 {\n\t\tt.Errorf(\"Expected 'ratelimit.call' counter to be 1, got %v\", val)\n\t}\n\n\t// Check \"ratelimit.latency\" Histogram\n\tif timings, ok := mock.Timings[\"ratelimit.latency\"]; !ok || len(timings) != 1 {\n\t\tt.Error(\"Expected 1 latency observation\")\n\t} else if timings[0] <= 0 {\n\t\tt.Errorf(\"Expected positive latency, got %v\", timings[0])\n\t}\n}\n",
+        "blob_sha": "778072d85ffc5b9f53709a80dabb4e02d5a9eb50",
+        "size": 1645
+      },
+      "go.mod": {
+        "text": "module github.com/manenim/gateway-rate-limiter\n\ngo 1.24.5\n\nrequire github.com/redis/go-redis/v9 v9.17.3\n\nrequire (\n\tgithub.com/cespare/xxhash/v2 v2.3.0 // indirect\n\tgithub.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect\n)\n",
+        "blob_sha": "7907476db4fba6c2fbad7230bcdf9da7faff9931",
+        "size": 247
+      },
+      "memory_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"sync\"\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestMemoryLimiter_Allow_Basics(t *testing.T) {\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tlimiter := NewMemoryLimiter()\n\n\tlimit := Limit{\n\t\tRate:   10,\n\t\tPeriod: time.Second,\n\t\tBurst:  10,\n\t}\n\n\tid := Identity{Namespace: \"test\", Key: \"user_1\"}\n\n\tdecision, _ := limiter.Allow(ctx, id, limit)\n\n\tif !decision.Allow {\n\t\tt.Error(\"Expected request to be allowed, but got denied!.\")\n\t}\n\n\tif decision.Remaining != 9 {\n\t\tt.Errorf(\"Expected 9 remaining tokens got %d instead!\", decision.Remaining)\n\t}\n\n}\n\nfunc TestMemoryLimiter_Exhaustion(t *testing.T) {\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tlimiter := NewMemoryLimiter()\n\n\tlimit := Limit{\n\t\tRate:   1,\n\t\tPeriod: time.Second,\n\t\tBurst:  5,\n\t}\n\n\tid := Identity{Namespace: \"test\", Key: \"user_1\"}\n\n\tfor i := 0; i < 5; i++ {\n\t\tdec, _ := limiter.Allow(ctx, id, limit)\n\t\tif !dec.Allow {\n\t\t\tt.Fatalf(\"Request %d was unexpectedly denied\", i)\n\t\t}\n\t}\n\n\tdec, _ := limiter.Allow(ctx, id, limit)\n\tif dec.Allow {\n\t\tt.Errorf(\"The 6th request should have been denied (Burst=5), but was allowed\")\n\t}\n}\n\nfunc TestMemoryLimiter_Refill(t *testing.T) {\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tlimiter := NewMemoryLimiter()\n\n\tlimit := Limit{\n\t\tRate:   10,\n\t\tPeriod: time.Second,\n\t\tBurst:  1,\n\t}\n\n\tid := Identity{Namespace: \"test\", Key: \"user_1\"}\n\n\tlimiter.Allow(ctx, id, limit)\n\n\tdec, _ := limiter.Allow(ctx, id, limit)\n\n\tif dec.Allow {\n\t\tt.Fatal(\"Should be denied immediately\")\n\t}\n\n\ttime.Sleep(150 * time.Millisecond)\n\n\tdec, err := limiter.Allow(ctx, id, limit)\n\tif err != nil || !dec.Allow {\n\t\tt.Fatalf(\"Expected allowance after refill, got %+v, err = %v\", dec, err)\n\t}\n}\n\n// Race Test\nfunc TestMemoryLimiter_ThreadSafety(t *testing.T) {\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\n\tlimiter := NewMemoryLimiter()\n\n\tlimit := Limit{\n\t\tRate:   1,\n\t\tBurst:  100,\n\t\tPeriod: 24 * time.Hour,\n\t}\n\n\tid := Identity{Namespace: \"test\", Key: \"user_1\"}\n\n\tvar wg sync.WaitGroup\n\n\twg.Add(100)\n\tfor range 100 {\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tlimiter.Allow(ctx, id, limit)\n\t\t}()\n\t}\n\twg.Wait()\n\n\tdec, _ := limiter.Allow(ctx, id, limit)\n\tif dec.Allow {\n\t\tt.Errorf(\"Expected bucket to be exhausted after 100 concurrent requests, but 101st was allowed\")\n\t}\n}\n",
+        "blob_sha": "33d747093fd9a03f9e18cee5eb6131252eebc14e",
+        "size": 2428
+      },
+      "docs/sequence.md": {
+        "text": "# Sequence Diagram\n\nThe flow of a single `Allow()` call.\n\n```mermaid\nsequenceDiagram\n    participant App\n    participant Limiter as RedisLimiter\n    participant Metrics as MetricsRecorder\n    participant Redis as Redis Server\n    \n    App->>Limiter: Allow(ctx, id, limit)\n    activate Limiter\n    \n    Limiter->>Limiter: Start Timer\n    \n    rect rgb(200, 255, 200)\n    Note right of Limiter: Network I/O\n    Limiter->>Redis: EVALSHA (Token Bucket)\n    \n    Redis-->>Limiter: {allowed, remaining, retry_after, reset_time}\n    end\n    \n    Limiter->>Metrics: Add(\"ratelimit.call\", ...)\n    Limiter->>Metrics: Add(\"ratelimit.errors\", ...) (if applicable)\n    \n    Limiter-->>App: Decision {Allow: true/false, ...}\n    \n    deactivate Limiter\n    Limiter->>Metrics: Observe(\"ratelimit.latency\", duration)\n```\n",
+        "blob_sha": "0b4a1c67dba8bd14b55fc6ceaa862e86764200f9",
+        "size": 806
+      },
+      "model.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"time\"\n)\n\ntype Namespace string\n\n// Limit defines a token-bucket policy.\n//\n// Rate is measured as tokens per Period. Burst is the maximum token capacity of\n// the bucket and controls how many requests can be allowed immediately.\ntype Limit struct {\n\tRate   int64\n\tPeriod time.Duration\n\tBurst  int64\n}\n\n// Decision is the result of a rate-limit check.\ntype Decision struct {\n\tAllow      bool\n\tRemaining  int64\n\tRetryAfter time.Duration\n\tResetTime  time.Time\n}\n\n// Identity uniquely identifies the subject being rate-limited (for example,\n// a user ID, an API key, or an IP address).\ntype Identity struct {\n\tNamespace Namespace\n\tKey       string\n}\n\n// RateLimiter performs token-bucket admission control.\ntype RateLimiter interface {\n\tAllow(ctx context.Context, id Identity, limit Limit) (Decision, error)\n}\n\n// MetricsRecorder defines the interface for collecting telemetry.\n// We abstract this so we aren't tied to Prometheus, Datadog, or any specific vendor.\ntype MetricsRecorder interface {\n\t// Add increments a counter (e.g., requests_total)\n\tAdd(name string, value float64, tags map[string]string)\n\n\t// Observe records a value in a histogram/distribution (e.g., latency)\n\tObserve(name string, value float64, tags map[string]string)\n}\n",
+        "blob_sha": "c4069cfa71917bdac28dfcf9bbd5602d70614a5f",
+        "size": 1277
+      },
+      "memory.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"sync\"\n\t\"time\"\n)\n\ntype state struct {\n\ttokens     float64\n\tlastRefill time.Time\n}\n\n// MemoryLimiter is an in-process token-bucket rate limiter.\n//\n// It is safe for concurrent use by multiple goroutines, but its state is local\n// to the process and is not shared across replicas. Use RedisLimiter when you\n// need a single global limit across multiple instances.\ntype MemoryLimiter struct {\n\tmu      sync.Mutex\n\tbuckets map[string]*state\n}\n\n// NewMemoryLimiter constructs a MemoryLimiter with empty state.\nfunc NewMemoryLimiter() *MemoryLimiter {\n\treturn &MemoryLimiter{\n\t\tbuckets: make(map[string]*state),\n\t}\n}\n\n// Allow checks whether a request for the given identity should be allowed under\n// the provided limit. Each call has a fixed cost of 1 token.\nfunc (m *MemoryLimiter) Allow(ctx context.Context, id Identity, limit Limit) (Decision, error) {\n\tm.mu.Lock()\n\tdefer m.mu.Unlock()\n\n\tnow := time.Now()\n\tkey := string(id.Namespace) + \":\" + id.Key\n\tst, exists := m.buckets[key]\n\tif !exists {\n\t\tm.buckets[key] = &state{\n\t\t\ttokens:     float64(limit.Burst) - 1,\n\t\t\tlastRefill: now,\n\t\t}\n\t\treturn Decision{\n\t\t\tAllow:      true,\n\t\t\tRemaining:  limit.Burst - 1,\n\t\t\tRetryAfter: 0,\n\t\t\tResetTime:  now,\n\t\t}, nil\n\t} else {\n\t\telapsed := now.Sub(st.lastRefill)\n\t\tif elapsed < 0 {\n\t\t\telapsed = 0\n\t\t}\n\t\tdelta := float64(elapsed) / float64(limit.Period)\n\t\ttokensToAdd := delta * float64(limit.Rate)\n\t\tnewBalance := st.tokens + tokensToAdd\n\t\tif newBalance > float64(limit.Burst) {\n\t\t\tnewBalance = float64(limit.Burst)\n\t\t}\n\t\tst.tokens = newBalance\n\n\t\tst.lastRefill = now\n\n\t\tif st.tokens >= 1 {\n\t\t\tst.tokens -= 1\n\t\t\treturn Decision{\n\t\t\t\tAllow:      true,\n\t\t\t\tRemaining:  int64(st.tokens),\n\t\t\t\tRetryAfter: 0,\n\t\t\t\tResetTime:  now,\n\t\t\t}, nil\n\t\t} else {\n\t\t\tcostPerToken := float64(limit.Period) / float64(limit.Rate)\n\t\t\tmissing := 1.0 - st.tokens\n\t\t\twaitParams := missing * costPerToken\n\t\t\treturn Decision{\n\t\t\t\tAllow:      false,\n\t\t\t\tRemaining:  int64(st.tokens),\n\t\t\t\tRetryAfter: time.Duration(waitParams),\n\t\t\t\tResetTime:  now.Add(time.Duration(waitParams)),\n\t\t\t}, nil\n\t\t}\n\t}\n\n}\n",
+        "blob_sha": "a04a8b3019299e7e4b016586b98007ead74a0bcc",
+        "size": 2098
+      },
+      "timeout_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"errors\"\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestRedisLimiter_ContextCancellation(t *testing.T) {\n\tclient := redisTestClient(t)\n\tlimiter, err := NewRedisLimiter(client, WithPrefix(redisTestPrefix(t, client)))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\n\tctx, cancel := context.WithCancel(context.Background())\n\tcancel()\n\n\tlimit := Limit{\n\t\tRate:   100,\n\t\tBurst:  100,\n\t\tPeriod: time.Second,\n\t}\n\tid := Identity{Namespace: \"test\", Key: \"user_cancel\"}\n\n\t_, err = limiter.Allow(ctx, id, limit)\n\n\tif err == nil {\n\t\tt.Fatal(\"Expected an error due to cancelled context, but got nil\")\n\t}\n\n\tif !errors.Is(err, context.Canceled) {\n\t\tt.Errorf(\"Expected error to be context.Canceled, but got: %v\", err)\n\t}\n}\n\nfunc TestRedisLimiter_Deadline(t *testing.T) {\n\tclient := redisTestClient(t)\n\tlimiter, err := NewRedisLimiter(client, WithPrefix(redisTestPrefix(t, client)))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\n\tctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)\n\tdefer cancel()\n\n\tlimit := Limit{\n\t\tRate:   100,\n\t\tBurst:  100,\n\t\tPeriod: time.Second,\n\t}\n\tid := Identity{Namespace: \"test\", Key: \"user_deadline\"}\n\n\t_, err = limiter.Allow(ctx, id, limit)\n\n\tif err == nil {\n\t\tt.Fatal(\"Expected timeout error, but got nil\")\n\t}\n\n\tif !errors.Is(err, context.DeadlineExceeded) {\n\t\tt.Errorf(\"Expected error to be context.DeadlineExceeded, but got: %v\", err)\n\t}\n}\n",
+        "blob_sha": "0620a141ca38fae637a2eb52bb25073dd7116c6a",
+        "size": 1379
+      },
+      "redis_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"os\"\n\t\"sync/atomic\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/redis/go-redis/v9\"\n)\n\n// redisTestClient makes integration tests optional locally and mandatory in CI.\n// Use a dedicated Redis instance: tests create isolated keys, never FLUSHDB.\nfunc redisTestClient(t testing.TB) *redis.Client {\n\tt.Helper()\n\taddr := os.Getenv(\"REDIS_ADDR\")\n\tif addr == \"\" {\n\t\taddr = \"localhost:6379\"\n\t}\n\tclient := redis.NewClient(&redis.Options{\n\t\tAddr: addr, MaxRetries: -1,\n\t\tDialTimeout: time.Second, ReadTimeout: time.Second, WriteTimeout: time.Second,\n\t\tContextTimeoutEnabled: true,\n\t})\n\tt.Cleanup(func() { _ = client.Close() })\n\tctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)\n\tdefer cancel()\n\tif err := client.Ping(ctx).Err(); err != nil {\n\t\tif os.Getenv(\"REQUIRE_REDIS\") == \"1\" {\n\t\t\tt.Fatalf(\"Redis required at %s: %v\", addr, err)\n\t\t}\n\t\tt.Skipf(\"Redis unavailable at %s (set REQUIRE_REDIS=1 to fail): %v\", addr, err)\n\t}\n\treturn client\n}\n\nvar redisTestSequence atomic.Uint64\n\nfunc redisTestPrefix(t testing.TB, client *redis.Client) string {\n\tt.Helper()\n\tprefix := fmt.Sprintf(\"limiter-test:%d:%d:%s:\", time.Now().UnixNano(), redisTestSequence.Add(1), t.Name())\n\tt.Cleanup(func() {\n\t\tctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)\n\t\tdefer cancel()\n\t\t// Prefixes are unique to this test; cleanup never touches other data.\n\t\tvar cursor uint64\n\t\tfor {\n\t\t\tkeys, next, err := client.Scan(ctx, cursor, prefix+\"*\", 100).Result()\n\t\t\tif err != nil {\n\t\t\t\treturn\n\t\t\t}\n\t\t\tif len(keys) > 0 {\n\t\t\t\t_ = client.Del(ctx, keys...).Err()\n\t\t\t}\n\t\t\tcursor = next\n\t\t\tif cursor == 0 {\n\t\t\t\treturn\n\t\t\t}\n\t\t}\n\t})\n\treturn prefix\n}\n\nfunc TestRedisLimiter_Integration(t *testing.T) {\n\tclient := redisTestClient(t)\n\tctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)\n\tdefer cancel()\n\n\tlimiter, err := NewRedisLimiter(client, WithPrefix(redisTestPrefix(t, client)))\n\tif err != nil {\n\t\tt.Fatalf(\"Failed to create RedisLimiter: %v\", err)\n\t}\n\n\tt.Run(\"BasicFlow\", func(t *testing.T) {\n\t\tkey := fmt.Sprintf(\"it_test_%d\", time.Now().UnixNano())\n\t\tid := Identity{Namespace: \"integration\", Key: key}\n\t\tlimit := Limit{\n\t\t\tRate:   10,\n\t\t\tPeriod: time.Second,\n\t\t\tBurst:  2,\n\t\t}\n\n\t\tdec, err := limiter.Allow(ctx, id, limit)\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"Redis error: %v\", err)\n\t\t}\n\t\tif !dec.Allow {\n\t\t\tt.Error(\"Expected first request to be Allowed\")\n\t\t}\n\t\tif dec.Remaining != 1 {\n\t\t\tt.Errorf(\"Expected 1 remaining, got %d\", dec.Remaining)\n\t\t}\n\n\t\tdec, err = limiter.Allow(ctx, id, limit)\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tif !dec.Allow {\n\t\t\tt.Error(\"Expected second request to be Allowed\")\n\t\t}\n\n\t\tdec, err = limiter.Allow(ctx, id, limit)\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tif dec.Allow {\n\t\t\tt.Error(\"Expected third request to be Denied\")\n\t\t}\n\t\tif dec.RetryAfter <= 0 {\n\t\t\tt.Error(\"Expected positive RetryAfter on denial\")\n\t\t}\n\t})\n\n\tt.Run(\"DistributedState\", func(t *testing.T) {\n\t\tkey := fmt.Sprintf(\"dist_test_%d\", time.Now().UnixNano())\n\t\tid := Identity{Namespace: \"integration\", Key: key}\n\t\tlimit := Limit{Rate: 1, Period: time.Second, Burst: 1}\n\n\t\tprefix := redisTestPrefix(t, client)\n\t\tlimiterA, err := NewRedisLimiter(client, WithPrefix(prefix))\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tfirst, err := limiterA.Allow(ctx, id, limit)\n\t\tif err != nil || !first.Allow {\n\t\t\tt.Fatalf(\"first decision = %+v, err = %v\", first, err)\n\t\t}\n\n\t\tlimiterB, err := NewRedisLimiter(client, WithPrefix(prefix))\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tdec, err := limiterB.Allow(ctx, id, limit)\n\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t\tif dec.Allow {\n\t\t\tt.Error(\"Instance B should see the token consumed by Instance A\")\n\t\t}\n\t})\n}\n",
+        "blob_sha": "25c16f4e450acefde57469d148c0e2d4a9614f74",
+        "size": 3676
+      },
+      "noop_metrics.go": {
+        "text": "package limiter\n\n// NoOpMetricsRecorder is a placeholder that does nothing.\n// It ensures we never have to check 'if r.recorder != nil' in our hot path.\ntype NoOpMetricsRecorder struct{}\n\nfunc (n *NoOpMetricsRecorder) Add(name string, value float64, tags map[string]string)     {}\nfunc (n *NoOpMetricsRecorder) Observe(name string, value float64, tags map[string]string) {}\n",
+        "blob_sha": "aea6ff63baeb9d7c994292c68ae8e5a958e2dbdd",
+        "size": 374
+      },
+      "redis.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t_ \"embed\"\n\t\"errors\"\n\t\"strconv\"\n\t\"time\"\n\n\t\"github.com/redis/go-redis/v9\"\n)\n\n//go:embed token_bucket.lua\nvar tokenBucketScript string\n\n// RedisLimiter is a distributed rate limiter backed by Redis.\n//\n// It uses a Lua script to perform the token-bucket update atomically, which\n// allows multiple application instances to enforce a single shared limit.\ntype RedisLimiter struct {\n\tclient    *redis.Client\n\tscriptSHA string\n\trecorder  MetricsRecorder\n\tprefix    string\n\ttimeout   time.Duration\n}\n\n// Option configures a RedisLimiter.\ntype Option func(*RedisLimiter)\n\n// WithPrefix sets the Redis key prefix. Default is \"limiter:\".\nfunc WithPrefix(prefix string) Option {\n\treturn func(r *RedisLimiter) {\n\t\tr.prefix = prefix\n\t}\n}\n\n// WithTimeout sets the timeout for Redis operations during initialization. Default is 5s.\nfunc WithTimeout(timeout time.Duration) Option {\n\treturn func(r *RedisLimiter) {\n\t\tr.timeout = timeout\n\t}\n}\n\n// WithRecorder sets the metrics recorder. Default is NoOpMetricsRecorder.\nfunc WithRecorder(recorder MetricsRecorder) Option {\n\treturn func(r *RedisLimiter) {\n\t\tr.recorder = recorder\n\t}\n}\n\n// NewRedisLimiter validates connectivity and loads the embedded Lua script into\n// Redis (SCRIPT LOAD). The returned limiter is ready to use.\nfunc NewRedisLimiter(client *redis.Client, opts ...Option) (*RedisLimiter, error) {\n\tlimiter := &RedisLimiter{\n\t\tclient:   client,\n\t\tprefix:   \"limiter:\",\n\t\ttimeout:  5 * time.Second,\n\t\trecorder: &NoOpMetricsRecorder{},\n\t}\n\n\tfor _, opt := range opts {\n\t\topt(limiter)\n\t}\n\n\tctx, cancel := context.WithTimeout(context.Background(), limiter.timeout)\n\tdefer cancel()\n\n\tif err := client.Ping(ctx).Err(); err != nil {\n\t\treturn nil, err\n\t}\n\n\tsha, err := client.ScriptLoad(ctx, tokenBucketScript).Result()\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tlimiter.scriptSHA = sha\n\treturn limiter, nil\n}\n\n// Allow checks whether a request for the given identity should be allowed under\n// the provided limit. Each call has a fixed cost of 1 token.\nfunc (r *RedisLimiter) Allow(ctx context.Context, id Identity, limit Limit) (Decision, error) {\n\t// 0. Instrumentation Setup\n\tstart := time.Now()\n\tstatus := \"error\" // Default status if we fail before decision\n\n\t// We use a closure for defer so it captures the final value of 'status'\n\tdefer func() {\n\t\tr.recorder.Observe(\"ratelimit.latency\", time.Since(start).Seconds(), map[string]string{\n\t\t\t\"namespace\": string(id.Namespace),\n\t\t\t\"status\":    status,\n\t\t})\n\t}()\n\n\t// 1. Prepare Inputs\n\tkey := r.prefix + string(id.Namespace) + \":\" + id.Key\n\tnow := float64(time.Now().UnixMicro()) / 1e6\n\tcost := 1.0\n\tratePerSecond := float64(limit.Rate) / limit.Period.Seconds()\n\n\tcmd := r.client.EvalSha(ctx, r.scriptSHA, []string{key},\n\t\tratePerSecond, // ARGV[1]\n\t\tlimit.Burst,   // ARGV[2]\n\t\tnow,           // ARGV[3]\n\t\tcost,          // ARGV[4]\n\t)\n\n\tresult, err := cmd.Result()\n\tif err != nil {\n\t\t// Record the error explicitly\n\t\tr.recorder.Add(\"ratelimit.errors\", 1, map[string]string{\n\t\t\t\"namespace\": string(id.Namespace),\n\t\t\t\"type\":      \"redis_eval\",\n\t\t})\n\t\treturn Decision{}, err\n\t}\n\n\tvalues, ok := result.([]interface{})\n\tif !ok || len(values) != 4 {\n\t\tr.recorder.Add(\"ratelimit.errors\", 1, map[string]string{\n\t\t\t\"namespace\": string(id.Namespace),\n\t\t\t\"type\":      \"invalid_format\",\n\t\t})\n\t\treturn Decision{}, errors.New(\"invalid lua response format\")\n\t}\n\n\tallowedVal := int64(convertToFloat(values[0]))\n\tremainingVal := int64(convertToFloat(values[1]))\n\n\tretryAfterFloat := convertToFloat(values[2])\n\tresetTimeFloat := convertToFloat(values[3])\n\n\tif allowedVal == 1 {\n\t\tstatus = \"allowed\"\n\t} else {\n\t\tstatus = \"denied\"\n\t}\n\n\tr.recorder.Add(\"ratelimit.call\", 1, map[string]string{\n\t\t\"namespace\": string(id.Namespace),\n\t\t\"status\":    status,\n\t})\n\n\treturn Decision{\n\t\tAllow:      allowedVal == 1,\n\t\tRemaining:  remainingVal,\n\t\tRetryAfter: time.Duration(retryAfterFloat * float64(time.Second)),\n\t\tResetTime:  time.UnixMicro(int64(resetTimeFloat * 1e6)),\n\t}, nil\n}\n\nfunc convertToFloat(val interface{}) float64 {\n\tswitch v := val.(type) {\n\tcase int64:\n\t\treturn float64(v)\n\tcase float64:\n\t\treturn v\n\tcase string:\n\t\tf, _ := strconv.ParseFloat(v, 64)\n\t\treturn f\n\tdefault:\n\t\treturn 0\n\t}\n}\n",
+        "blob_sha": "9c8f77cc4f3b8f331be5a6b3efb33c1f3f4a4353",
+        "size": 4198
+      },
+      "redis_evidence_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"errors\"\n\t\"fmt\"\n\t\"net\"\n\t\"strings\"\n\t\"sync\"\n\t\"testing\"\n\t\"time\"\n\n\t\"github.com/redis/go-redis/v9\"\n)\n\n// Separate clients model replicas with independent connection pools. A one-day\n// refill period prevents additional whole tokens during this bounded test.\nfunc TestRedisLimiter_ConcurrentSharedBucket(t *testing.T) {\n\tconst replicas, requests, burst = 8, 256, 37\n\tclient := redisTestClient(t)\n\tprefix := redisTestPrefix(t, client)\n\tlimiters := make([]*RedisLimiter, replicas)\n\tfor i := range limiters {\n\t\tvar err error\n\t\tlimiters[i], err = NewRedisLimiter(redisTestClient(t), WithPrefix(prefix))\n\t\tif err != nil {\n\t\t\tt.Fatal(err)\n\t\t}\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)\n\tdefer cancel()\n\tlimit := Limit{Rate: 1, Period: 24 * time.Hour, Burst: burst}\n\tid := Identity{Namespace: \"contention\", Key: \"shared\"}\n\ttype result struct {\n\t\tdecision Decision\n\t\terr      error\n\t}\n\tresults := make(chan result, requests)\n\tstart := make(chan struct{})\n\tvar wg sync.WaitGroup\n\tfor i := range requests {\n\t\twg.Add(1)\n\t\tgo func(i int) {\n\t\t\tdefer wg.Done()\n\t\t\t<-start\n\t\t\tdecision, err := limiters[i%replicas].Allow(ctx, id, limit)\n\t\t\tresults <- result{decision, err}\n\t\t}(i)\n\t}\n\tclose(start)\n\twg.Wait()\n\tclose(results)\n\tallowed := 0\n\tfor result := range results {\n\t\tif result.err != nil {\n\t\t\tt.Fatalf(\"Allow: %v\", result.err)\n\t\t}\n\t\tdec := result.decision\n\t\tif dec.Remaining < 0 || dec.Remaining >= burst {\n\t\t\tt.Fatalf(\"invalid remaining: %+v\", dec)\n\t\t}\n\t\tif dec.Allow {\n\t\t\tallowed++\n\t\t} else if dec.RetryAfter <= 0 {\n\t\t\tt.Fatalf(\"missing retry hint: %+v\", dec)\n\t\t}\n\t}\n\tif allowed != burst {\n\t\tt.Fatalf(\"allowed %d/%d requests across %d clients, want exactly burst=%d\", allowed, requests, replicas, burst)\n\t}\n\tt.Logf(\"shared bucket: %d allowed, %d denied across %d independent clients\", allowed, requests-allowed, replicas)\n}\n\ntype metricEvent struct {\n\tname  string\n\tvalue float64\n\ttags  map[string]string\n}\n\ntype eventRecorder struct {\n\tmu                sync.Mutex\n\tcounters, timings []metricEvent\n}\n\nfunc (r *eventRecorder) Add(name string, value float64, tags map[string]string) {\n\tr.mu.Lock()\n\tdefer r.mu.Unlock()\n\tr.counters = append(r.counters, metricEvent{name, value, tags})\n}\nfunc (r *eventRecorder) Observe(name string, value float64, tags map[string]string) {\n\tr.mu.Lock()\n\tdefer r.mu.Unlock()\n\tr.timings = append(r.timings, metricEvent{name, value, tags})\n}\n\nfunc TestRedisLimiter_DependencyFailures(t *testing.T) {\n\tfor _, failure := range []string{\"closed_client\", \"wrong_key_type\", \"missing_script\"} {\n\t\tt.Run(failure, func(t *testing.T) {\n\t\t\tclient := redisTestClient(t)\n\t\t\tprefix := redisTestPrefix(t, redisTestClient(t))\n\t\t\trecorder := &eventRecorder{}\n\t\t\tlimiter, err := NewRedisLimiter(client, WithPrefix(prefix), WithRecorder(recorder))\n\t\t\tif err != nil {\n\t\t\t\tt.Fatal(err)\n\t\t\t}\n\t\t\tctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)\n\t\t\tdefer cancel()\n\t\t\tid := Identity{Namespace: \"failure\", Key: failure}\n\t\t\tlimit := Limit{Rate: 1, Period: 24 * time.Hour, Burst: 1}\n\t\t\t// Prove the initialized limiter works before introducing a failure.\n\t\t\tif dec, err := limiter.Allow(ctx, id, limit); err != nil || !dec.Allow {\n\t\t\t\tt.Fatalf(\"healthy decision = %+v, err = %v\", dec, err)\n\t\t\t}\n\t\t\tswitch failure {\n\t\t\tcase \"closed_client\":\n\t\t\t\tif err := client.Close(); err != nil {\n\t\t\t\t\tt.Fatal(err)\n\t\t\t\t}\n\t\t\tcase \"wrong_key_type\":\n\t\t\t\tkey := prefix + string(id.Namespace) + \":\" + id.Key\n\t\t\t\tif err := client.Set(ctx, key, \"not a hash\", time.Minute).Err(); err != nil {\n\t\t\t\t\tt.Fatal(err)\n\t\t\t\t}\n\t\t\tcase \"missing_script\":\n\t\t\t\t// Model a cache miss without flushing scripts used by other tests.\n\t\t\t\tlimiter.scriptSHA = \"0000000000000000000000000000000000000000\"\n\t\t\t}\n\t\t\tdec, err := limiter.Allow(ctx, id, limit)\n\t\t\tif err == nil || dec != (Decision{}) {\n\t\t\t\tt.Fatalf(\"failure decision = %+v, err = %v; want zero decision and error\", dec, err)\n\t\t\t}\n\t\t\tif len(recorder.counters) != 2 || len(recorder.timings) != 2 {\n\t\t\t\tt.Fatalf(\"metrics = %+v\", recorder)\n\t\t\t}\n\t\t\tcounter := recorder.counters[1]\n\t\t\tif counter.name != \"ratelimit.errors\" || counter.value != 1 || counter.tags[\"namespace\"] != \"failure\" || counter.tags[\"type\"] != \"redis_eval\" {\n\t\t\t\tt.Fatalf(\"error counter = %+v\", counter)\n\t\t\t}\n\t\t\ttiming := recorder.timings[1]\n\t\t\tif timing.name != \"ratelimit.latency\" || timing.value <= 0 || timing.tags[\"status\"] != \"error\" {\n\t\t\t\tt.Fatalf(\"error latency = %+v\", timing)\n\t\t\t}\n\t\t\tt.Logf(\"%s returned %v and emitted error metrics\", failure, err)\n\t\t})\n\t}\n}\n\n// This initialization failure is deterministic and requires no running backend.\nfunc TestRedisLimiter_UnreachableDependency(t *testing.T) {\n\tunreachable := errors.New(\"test: dependency unreachable\")\n\tclient := redis.NewClient(&redis.Options{\n\t\tAddr: \"unused:6379\", MaxRetries: -1,\n\t\tDialer: func(context.Context, string, string) (net.Conn, error) { return nil, unreachable },\n\t})\n\tdefer client.Close()\n\tlimiter, err := NewRedisLimiter(client, WithTimeout(time.Second))\n\tif limiter != nil || !errors.Is(err, unreachable) {\n\t\tt.Fatalf(\"NewRedisLimiter = %v, %v; want dependency error\", limiter, err)\n\t}\n}\n\nfunc TestRedisLimiter_MetricDecisionTags(t *testing.T) {\n\tclient := redisTestClient(t)\n\trecorder := &eventRecorder{}\n\tlimiter, err := NewRedisLimiter(client, WithPrefix(redisTestPrefix(t, client)), WithRecorder(recorder))\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tfor i, status := range []string{\"allowed\", \"denied\"} {\n\t\tdec, err := limiter.Allow(context.Background(), Identity{Namespace: \"tags\", Key: \"same\"}, Limit{Rate: 1, Period: 24 * time.Hour, Burst: 1})\n\t\tif err != nil || dec.Allow != (i == 0) {\n\t\t\tt.Fatalf(\"%s: decision=%+v, err=%v\", status, dec, err)\n\t\t}\n\t\tcounter, timing := recorder.counters[i], recorder.timings[i]\n\t\tif counter.name != \"ratelimit.call\" || counter.value != 1 || counter.tags[\"namespace\"] != \"tags\" || counter.tags[\"status\"] != status {\n\t\t\tt.Fatalf(\"decision counter: %+v\", counter)\n\t\t}\n\t\tif timing.name != \"ratelimit.latency\" || timing.value <= 0 || timing.tags[\"status\"] != status {\n\t\t\tt.Fatalf(\"decision latency: %+v\", timing)\n\t\t}\n\t}\n}\n\nfunc BenchmarkRedisLimiter_Allow(b *testing.B) {\n\tfor _, allowed := range []bool{true, false} {\n\t\tb.Run(fmt.Sprintf(\"allowed=%t\", allowed), func(b *testing.B) {\n\t\t\tclient := redisTestClient(b)\n\t\t\tlimiter, err := NewRedisLimiter(client, WithPrefix(redisTestPrefix(b, client)))\n\t\t\tif err != nil {\n\t\t\t\tb.Fatal(err)\n\t\t\t}\n\t\t\tlimit := Limit{Rate: 1, Period: 24 * time.Hour, Burst: 1}\n\t\t\tif allowed {\n\t\t\t\tlimit = Limit{Rate: 1_000_000_000, Period: time.Second, Burst: 1_000_000_000}\n\t\t\t}\n\t\t\tctx := context.Background()\n\t\t\tid := Identity{Namespace: \"benchmark\", Key: \"shared\"}\n\t\t\tif _, err := limiter.Allow(ctx, id, limit); err != nil {\n\t\t\t\tb.Fatal(err)\n\t\t\t}\n\t\t\tb.ReportAllocs()\n\t\t\tfor b.Loop() {\n\t\t\t\tdec, err := limiter.Allow(ctx, id, limit)\n\t\t\t\tif err != nil || dec.Allow != allowed {\n\t\t\t\t\tb.Fatalf(\"decision = %+v, err = %v\", dec, err)\n\t\t\t\t}\n\t\t\t}\n\t\t})\n\t}\n}\n\nfunc TestRedisLimiter_ServerVersion(t *testing.T) {\n\tclient := redisTestClient(t)\n\tinfo, err := client.Info(context.Background(), \"server\").Result()\n\tif err != nil {\n\t\tt.Fatal(err)\n\t}\n\tfor _, line := range strings.Split(info, \"\\n\") {\n\t\tif strings.HasPrefix(line, \"redis_version:\") || strings.HasPrefix(line, \"redis_mode:\") {\n\t\t\tt.Log(strings.TrimSpace(line))\n\t\t}\n\t}\n}\n",
+        "blob_sha": "270e5aa509318b6a1f352ec53b469b73c0db1089",
+        "size": 7319
+      },
+      "options_test.go": {
+        "text": "package limiter\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"testing\"\n\t\"time\"\n)\n\nfunc TestRedisLimiter_Options(t *testing.T) {\n\tclient := redisTestClient(t)\n\tctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)\n\tdefer cancel()\n\n\tt.Run(\"WithPrefix\", func(t *testing.T) {\n\t\tprefix := redisTestPrefix(t, client)\n\t\tkey := fmt.Sprintf(\"opt_test_%d\", time.Now().UnixNano())\n\t\tid := Identity{Namespace: \"options\", Key: key}\n\t\tlimit := Limit{Rate: 1, Period: time.Second, Burst: 1}\n\n\t\tlimiter, err := NewRedisLimiter(client, WithPrefix(prefix))\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"Failed to create limiter: %v\", err)\n\t\t}\n\n\t\t_, err = limiter.Allow(ctx, id, limit)\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"Allow failed: %v\", err)\n\t\t}\n\n\t\t// Verify the key uses the custom prefix\n\t\texpectedKey := prefix + string(id.Namespace) + \":\" + id.Key\n\t\texists, err := client.Exists(ctx, expectedKey).Result()\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"Redis Exists failed: %v\", err)\n\t\t}\n\t\tif exists == 0 {\n\t\t\tt.Errorf(\"Expected key %s to exist, but it does not\", expectedKey)\n\t\t}\n\t})\n\n\tt.Run(\"WithTimeout\", func(t *testing.T) {\n\t\t// Hard to test timeout without mocking network latency or setting extremely small timeout.\n\t\t// We can check if NewRedisLimiter succeeds with valid timeout.\n\t\t_, err := NewRedisLimiter(client, WithTimeout(10*time.Millisecond))\n\t\tif err != nil {\n\t\t\tt.Errorf(\"WithTimeout should not cause error on valid client: %v\", err)\n\t\t}\n\t})\n}\n",
+        "blob_sha": "79423fc709556e925ee7b6ab8a1685a916fc0baa",
+        "size": 1417
+      },
+      "token_bucket.lua": {
+        "text": "local key = KEYS[1]\nlocal rate = tonumber(ARGV[1])\nlocal capacity = tonumber(ARGV[2])\nlocal now = tonumber(ARGV[3])\nlocal cost = tonumber(ARGV[4])\n\n\nlocal state = redis.call('HMGET', key, 'tokens', 'last_refill')\nlocal tokens = tonumber(state[1])\nlocal last_refill = tonumber(state[2])\n\nif tokens == nil then\n    tokens = capacity\n    last_refill = now\nend\n\nlocal elapsed = now - last_refill\nif elapsed < 0 then\n    elapsed = 0\nend\n\nlocal tokens_to_add = elapsed * rate\ntokens = tokens + tokens_to_add\n\nif tokens > capacity then\n    tokens = capacity\nend\n\nlocal allowed = 0\nlocal remaining = 0\nlocal retry_after = 0\nlocal reset_time = 0\n\nif tokens >= cost then\n    tokens = tokens - cost\n    allowed = 1\n    remaining = tokens\n    reset_time = now\n    \n    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)\n    \n    local ttl = math.ceil((capacity / rate) * 2)\n\tredis.call('EXPIRE', key, ttl)\nelse\n\tallowed = 0\n\tremaining = tokens\n\t\n\tlocal needed = cost - tokens\n\tretry_after = needed / rate\n\treset_time = now + retry_after\nend\n\nreturn {allowed, remaining, tostring(retry_after), tostring(reset_time)}\n",
+        "blob_sha": "543c3e5140b2c3c50b70ac790231360ae6408a87",
+        "size": 1115
+      }
+    },
+    "skipped": [],
+    "source": "pinned_fixture"
+  },
+  "evidence": [
+    {
+      "id": "E1",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "model.go",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "package limiter\n\nimport (\n\t\"context\"\n\t\"time\"\n)\n\ntype Namespace string\n\n// Limit defines a token-bucket policy.\n//\n// Rate is measured as tokens per Period. Burst is the maximum token capacity of\n// the bucket and controls how many requests can be allowed immediately.\ntype Limit struct {\n\tRate   int64\n\tPeriod time.Duration\n\tBurst  int64\n}\n\n// Decision is the result of a rate-limit check.\ntype Decision struct {\n\tAllow      bool\n\tRemaining  int64\n\tRetryAfter time.Duration\n\tResetTime  time.Time\n}\n\n// Identity uniquely identifies the subject being rate-limited (for example,\n// a user ID, an API key, or an IP address).\ntype Identity struct {\n\tNamespace Namespace\n\tKey       string\n}\n\n// RateLimiter performs token-bucket admission control.\ntype RateLimiter interface {\n\tAllow(ctx context.Context, id Identity, limit Limit) (Decision, error)\n}\n\n// MetricsRecorder defines the interface for collecting telemetry.\n// We abstract this so we aren't tied to Prometheus, Datadog, or any specific vendor.\ntype MetricsRecorder interface {\n\t// Add increments a counter (e.g., requests_total)\n\tAdd(name string, value float64, tags map[string]string)",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/model.go#L1-L44"
+    },
+    {
+      "id": "E2",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "memory.go",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "package limiter\n\nimport (\n\t\"context\"\n\t\"sync\"\n\t\"time\"\n)\n\ntype state struct {\n\ttokens     float64\n\tlastRefill time.Time\n}\n\n// MemoryLimiter is an in-process token-bucket rate limiter.\n//\n// It is safe for concurrent use by multiple goroutines, but its state is local\n// to the process and is not shared across replicas. Use RedisLimiter when you\n// need a single global limit across multiple instances.\ntype MemoryLimiter struct {\n\tmu      sync.Mutex\n\tbuckets map[string]*state\n}\n\n// NewMemoryLimiter constructs a MemoryLimiter with empty state.\nfunc NewMemoryLimiter() *MemoryLimiter {\n\treturn &MemoryLimiter{\n\t\tbuckets: make(map[string]*state),\n\t}\n}\n\n// Allow checks whether a request for the given identity should be allowed under\n// the provided limit. Each call has a fixed cost of 1 token.\nfunc (m *MemoryLimiter) Allow(ctx context.Context, id Identity, limit Limit) (Decision, error) {\n\tm.mu.Lock()\n\tdefer m.mu.Unlock()\n\n\tnow := time.Now()\n\tkey := string(id.Namespace) + \":\" + id.Key\n\tst, exists := m.buckets[key]\n\tif !exists {\n\t\tm.buckets[key] = &state{\n\t\t\ttokens:     float64(limit.Burst) - 1,\n\t\t\tlastRefill: now,\n\t\t}",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/memory.go#L1-L44"
+    },
+    {
+      "id": "E3",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "doc.go",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "// Package limiter provides local and distributed rate limiting based on the\n// Token Bucket algorithm.\n//\n// The primary entry point is the RateLimiter interface:\n//\n//\tdec, err := limiter.Allow(ctx, id, limit)\n//\n// The returned Decision contains whether the request is allowed, how many whole\n// tokens remain, and timing hints for callers that want to set rate-limit\n// headers (for example, Retry-After).\n//\n// # Overview\n//\n// This package implements a Token Bucket:\n//\n//   - Each identity has a \"bucket\" holding tokens.\n//   - The bucket refills over time up to a maximum capacity (Burst).\n//   - Each Allow call consumes 1 token when available.\n//\n// Unlike fixed-window counters, token buckets naturally support bursts while\n// still enforcing a long-term average rate.\n//\n// # Core Types\n//\n// Limit defines the policy:\n//\n//   - Rate: tokens earned per Period (for example, 10 per second or 60 per\n//     minute)\n//   - Period: the time window Rate is measured over\n//   - Burst: maximum number of tokens the bucket can hold (also the maximum\n//     immediate burst)\n//\n// Identity defines \"who\" is being rate-limited. It is split into:\n//\n//   - Namespace: a logical grouping (for example, \"user\", \"ip\", \"api_key\")\n//   - Key: the identifier within that namespace (for example, \"user_123\")\n//\n// # Backends\n//\n// The package provides two implementations with the same Allow API:\n//\n//   - MemoryLimiter: an in-process limiter backed by a Go map. This is useful\n//     for unit tests, local development, and single-instance deployments.\n//     Because its state is local to the process, it does not enforce a global",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/doc.go#L1-L44"
+    },
+    {
+      "id": "E4",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "README.md",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "# Distributed Rate Limiter\n\n[![Go Report Card](https://goreportcard.com/badge/github.com/manenim/gateway-rate-limiter)](https://goreportcard.com/report/github.com/manenim/gateway-rate-limiter) [![CI](https://github.com/manenim/gateway-rate-limiter/actions/workflows/ci.yml/badge.svg)](https://github.com/manenim/gateway-rate-limiter/actions/workflows/ci.yml) [![GoDoc](https://godoc.org/github.com/manenim/gateway-rate-limiter?status.svg)](https://pkg.go.dev/github.com/manenim/gateway-rate-limiter) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)\n\nA Redis-backed, distributed token bucket rate limiter for Go.\n\nThis repo ships:\n\n- A reusable library (root `limiter` package) with a small, testable API\n- A Redis Lua script embedded in the binary for atomic token-bucket updates\n- A runnable example server (`cmd/example-server`)\n- Mermaid diagrams in `docs/`\n\n## Contents\n\n- [Distributed Rate Limiter](#distributed-rate-limiter)\n  - [Contents](#contents)\n  - [Features](#features)\n  - [Requirements](#requirements)\n  - [Installation](#installation)\n  - [Quick start (Redis-backed)](#quick-start-redis-backed)\n  - [Core Concepts](#core-concepts)\n    - [Core types](#core-types)\n    - [Interface + implementations](#interface--implementations)\n    - [Redis key format](#redis-key-format)\n  - [Usage patterns](#usage-patterns)\n    - [In-memory limiter (tests / single-instance)](#in-memory-limiter-tests--single-instance)\n    - [HTTP integration (returning 429)](#http-integration-returning-429)\n    - [Fail open vs fail closed](#fail-open-vs-fail-closed)\n  - [Configuration](#configuration)\n  - [Observability (metrics)](#observability-metrics)\n  - [How it works](#how-it-works)\n    - [Token bucket (conceptual)](#token-bucket-conceptual)\n    - [Redis atomic update (implementation)](#redis-atomic-update-implementation)\n    - [Redis data model](#redis-data-model)\n  - [Architecture](#architecture)\n  - [Sequence](#sequence)\n  - [Example server](#example-server)\n  - [Docker](#docker)\n  - [Testing](#testing)\n  - [Performance](#performance)\n    - [Reproduce benchmarks and profiles](#reproduce-benchmarks-and-profiles)\n  - [Operational boundaries](#operational-boundaries)\n",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/README.md#L1-L44"
+    },
+    {
+      "id": "E5",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "doc.go",
+      "start_line": 69,
+      "end_line": 112,
+      "excerpt": "// caller decides whether to deny traffic (protect the backend) or allow traffic\n// (maximize availability).\n//\n// # Decision Semantics\n//\n// Decision fields are intended to be directly consumable by application code:\n//\n//   - Allow reports whether the current request is permitted.\n//   - Remaining is the number of whole tokens remaining after the decision is\n//     applied (floored to an int64).\n//   - RetryAfter is 0 when allowed; when denied it is the approximate duration\n//     until a single token is expected to be available.\n//   - ResetTime is the absolute timestamp corresponding to time.Now()+RetryAfter.\n//\n// # Usage\n//\n// For a runnable example using MemoryLimiter, see ExampleMemoryLimiter in\n// example_test.go.\n//\n// # Storage Details\n//\n// MemoryLimiter stores state in a process-local map keyed by:\n//\n//\t\"{namespace}:{key}\"\n//\n// RedisLimiter stores state in Redis under keys prefixed with \"limiter:\" and\n// uses a Redis hash with two fields:\n//\n//   - \"tokens\": current token balance (float)\n//   - \"last_refill\": last update time as seconds since epoch (float)\n//\n// Redis keys are set to expire to avoid leaking memory for identities that stop\n// sending requests.\n//\n// # Limitations and Notes\n//\n//   - MemoryLimiter does not evict old identities; for long-lived processes with\n//     high-cardinality keys you likely want RedisLimiter or a custom in-memory\n//     store with TTL/LRU eviction.\n//   - RedisLimiter requires a reachable Redis instance and returns errors\n//     directly; callers must decide their availability vs protection tradeoff.\n//   - This package currently models each Allow call as a cost of 1 token.\n//   - RedisLimiter uses EVALSHA; if Redis is restarted and script cache is\n//     cleared, Allow may return a NOSCRIPT error until the script is reloaded",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/doc.go#L69-L112"
+    },
+    {
+      "id": "E6",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "docs/performance.md",
+      "start_line": 35,
+      "end_line": 78,
+      "excerpt": "\n## Three measured samples per workload\n\nCommands: `go test -run '^$' -bench . -benchmem -benchtime=1s -count=3 .`\nwith the environment above. [Full raw benchmark output](benchmark-records/2026-10-03/benchmarks.txt).\n\n| Workload | ns/op, three samples | B/op | allocs/op |\n| --- | --- | --- | --- |\n| Memory, allowed | 190.8 / 182.6 / 181.5 | 16 | 1 |\n| Memory, denied | 229.6 / 211.0 / 164.5 | 16 | 1 |\n| Memory, parallel shared bucket | 228.6 / 200.5 / 202.4 | 16 | 1 |\n| Redis, allowed, sequential | 78,464 / 72,371 / 86,828 | 1,279 | 23 |\n| Redis, denied, sequential | 69,389 / 68,595 / 102,453 | 1,279 / 1,279 / 1,271 | 21 |\n\nEach benchmark repeatedly checks one initialized identity. Allowed cases use a\nlarge burst/high refill rate and assert allowance on every operation. Denied\ncases consume the initial token first and use a one-day refill period. Bucket\ncreation and Redis script loading are outside the timed loop. The parallel\nmemory case uses `RunParallel` against one bucket with four workers by default.\n\nThese Redis numbers include client/network/response decoding and inline metrics\nhooks. They do not measure Redis-side Lua execution time or p95/p99 HTTP request\nlatency. Redis parallel throughput, high-cardinality identities, failover, and\ncross-host networks have not been benchmarked here. The memory implementation's\nglobal mutex also serializes different identities.\n\n## Profiles from separate runs\n\n`verify.sh` executes CPU and heap profiling for the allowed/denied memory paths\nand mutex profiling for the parallel shared bucket. Profile-run timings are not\nincluded in the sample table.\n\n- [CPU top](benchmark-records/2026-10-03/cpu-top.txt): 6.72 seconds of samples;\n  `time.runtimeNow` accounts for 20.83% flat and `runtime.concatstrings` for\n  11.31% flat. String concatenation and allocation are visible costs in this run.\n- [Heap allocation top](benchmark-records/2026-10-03/heap-top.txt): sampled\n  allocation space attributes 465.51 MB (99.31%) to `MemoryLimiter.Allow` across\n  the profiling run. This is cumulative allocated space, not retained memory or\n  a per-request measurement; the benchmark reports 16 B/op and one allocation.\n- [Mutex top](benchmark-records/2026-10-03/mutex-top.txt): sampled aggregate mutex\n  delay is 4.47 seconds, attributed to the lock's release in `MemoryLimiter.Allow`.\n  Delay sums across workers and is not the latency of one request.\n\nThe script writes raw `.pprof` files and the test executable into `evidence/`.",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/docs/performance.md#L35-L78"
+    },
+    {
+      "id": "E7",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "redis.go",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "package limiter\n\nimport (\n\t\"context\"\n\t_ \"embed\"\n\t\"errors\"\n\t\"strconv\"\n\t\"time\"\n\n\t\"github.com/redis/go-redis/v9\"\n)\n\n//go:embed token_bucket.lua\nvar tokenBucketScript string\n\n// RedisLimiter is a distributed rate limiter backed by Redis.\n//\n// It uses a Lua script to perform the token-bucket update atomically, which\n// allows multiple application instances to enforce a single shared limit.\ntype RedisLimiter struct {\n\tclient    *redis.Client\n\tscriptSHA string\n\trecorder  MetricsRecorder\n\tprefix    string\n\ttimeout   time.Duration\n}\n\n// Option configures a RedisLimiter.\ntype Option func(*RedisLimiter)\n\n// WithPrefix sets the Redis key prefix. Default is \"limiter:\".\nfunc WithPrefix(prefix string) Option {\n\treturn func(r *RedisLimiter) {\n\t\tr.prefix = prefix\n\t}\n}\n\n// WithTimeout sets the timeout for Redis operations during initialization. Default is 5s.\nfunc WithTimeout(timeout time.Duration) Option {\n\treturn func(r *RedisLimiter) {\n\t\tr.timeout = timeout\n\t}\n}\n",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/redis.go#L1-L44"
+    },
+    {
+      "id": "E8",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "README.md",
+      "start_line": 35,
+      "end_line": 78,
+      "excerpt": "    - [Redis data model](#redis-data-model)\n  - [Architecture](#architecture)\n  - [Sequence](#sequence)\n  - [Example server](#example-server)\n  - [Docker](#docker)\n  - [Testing](#testing)\n  - [Performance](#performance)\n    - [Reproduce benchmarks and profiles](#reproduce-benchmarks-and-profiles)\n  - [Operational boundaries](#operational-boundaries)\n\n## Features\n\n- **Redis-backed distributed state**: enforce one global limit across many app instances.\n- **Atomicity via Lua**: token refill + deduction happens server-side as a single atomic operation.\n- **Context support**: `Allow()` passes the caller context to go-redis; configure `ContextTimeoutEnabled` to apply deadlines to network I/O.\n- **Pluggable metrics**: bring your own Prometheus/DataDog/Otel adapter via a tiny interface.\n- **In-memory implementation**: dependency-free `MemoryLimiter` for tests and local dev.\n\n## Requirements\n\n- Go `1.24.5` (see `go.mod`)\n- Redis (only required for `RedisLimiter`; `MemoryLimiter` is dependency-free)\n\n## Installation\n\n```bash\ngo get github.com/manenim/gateway-rate-limiter\n```\n\nImport the library package:\n\n```go\nimport \"github.com/manenim/gateway-rate-limiter\"\n```\n\nIf you prefer to be explicit about versions:\n\n```bash\ngo get github.com/manenim/gateway-rate-limiter@latest\n```\n\n## Quick start (Redis-backed)\n\n```go",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/README.md#L35-L78"
+    },
+    {
+      "id": "E9",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "token_bucket.lua",
+      "start_line": 1,
+      "end_line": 44,
+      "excerpt": "local key = KEYS[1]\nlocal rate = tonumber(ARGV[1])\nlocal capacity = tonumber(ARGV[2])\nlocal now = tonumber(ARGV[3])\nlocal cost = tonumber(ARGV[4])\n\n\nlocal state = redis.call('HMGET', key, 'tokens', 'last_refill')\nlocal tokens = tonumber(state[1])\nlocal last_refill = tonumber(state[2])\n\nif tokens == nil then\n    tokens = capacity\n    last_refill = now\nend\n\nlocal elapsed = now - last_refill\nif elapsed < 0 then\n    elapsed = 0\nend\n\nlocal tokens_to_add = elapsed * rate\ntokens = tokens + tokens_to_add\n\nif tokens > capacity then\n    tokens = capacity\nend\n\nlocal allowed = 0\nlocal remaining = 0\nlocal retry_after = 0\nlocal reset_time = 0\n\nif tokens >= cost then\n    tokens = tokens - cost\n    allowed = 1\n    remaining = tokens\n    reset_time = now\n    \n    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)\n    \n    local ttl = math.ceil((capacity / rate) * 2)\n\tredis.call('EXPIRE', key, ttl)\nelse",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/token_bucket.lua#L1-L44"
+    },
+    {
+      "id": "E10",
+      "repository": "manenim/gateway-rate-limiter",
+      "commit_sha": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
+      "path": "memory.go",
+      "start_line": 35,
+      "end_line": 78,
+      "excerpt": "\tdefer m.mu.Unlock()\n\n\tnow := time.Now()\n\tkey := string(id.Namespace) + \":\" + id.Key\n\tst, exists := m.buckets[key]\n\tif !exists {\n\t\tm.buckets[key] = &state{\n\t\t\ttokens:     float64(limit.Burst) - 1,\n\t\t\tlastRefill: now,\n\t\t}\n\t\treturn Decision{\n\t\t\tAllow:      true,\n\t\t\tRemaining:  limit.Burst - 1,\n\t\t\tRetryAfter: 0,\n\t\t\tResetTime:  now,\n\t\t}, nil\n\t} else {\n\t\telapsed := now.Sub(st.lastRefill)\n\t\tif elapsed < 0 {\n\t\t\telapsed = 0\n\t\t}\n\t\tdelta := float64(elapsed) / float64(limit.Period)\n\t\ttokensToAdd := delta * float64(limit.Rate)\n\t\tnewBalance := st.tokens + tokensToAdd\n\t\tif newBalance > float64(limit.Burst) {\n\t\t\tnewBalance = float64(limit.Burst)\n\t\t}\n\t\tst.tokens = newBalance\n\n\t\tst.lastRefill = now\n\n\t\tif st.tokens >= 1 {\n\t\t\tst.tokens -= 1\n\t\t\treturn Decision{\n\t\t\t\tAllow:      true,\n\t\t\t\tRemaining:  int64(st.tokens),\n\t\t\t\tRetryAfter: 0,\n\t\t\t\tResetTime:  now,\n\t\t\t}, nil\n\t\t} else {\n\t\t\tcostPerToken := float64(limit.Period) / float64(limit.Rate)\n\t\t\tmissing := 1.0 - st.tokens\n\t\t\twaitParams := missing * costPerToken\n\t\t\treturn Decision{",
+      "permalink": "https://github.com/manenim/gateway-rate-limiter/blob/50eb89b722a068b2e63fa1dfe2a87d2605ae564a/memory.go#L35-L78"
+    }
+  ],
+  "documentation": {
+    "claims": [
+      {
+        "id": "doc:C1",
+        "text": "The architecture implements a token-bucket rate limiting system using two main components: MemoryLimiter and RedisLimiter.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "doc:C2",
+        "text": "MemoryLimiter maintains a local state in memory using a Go map, making it suitable for single-instance deployments where global state across replicas is not needed.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "doc:C3",
+        "text": "RedisLimiter uses Redis to provide distributed rate limiting, utilizing Lua scripts for atomic updates to ensure consistent token counts across multiple instances.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E7",
+          "E9"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "doc:C4",
+        "text": "Both MemoryLimiter and RedisLimiter adhere to the RateLimiter interface that defines a method for checking if a request can be allowed based on token availability.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E1",
+          "E3"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      }
+    ],
+    "proposals": [],
+    "unanswered_questions": [],
+    "insufficient_evidence": false
+  },
+  "investigation": {
+    "claims": [
+      {
+        "id": "issue:C1",
+        "text": "The architecture implements a token-bucket rate limiting system using two main components: MemoryLimiter and RedisLimiter.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "issue:C2",
+        "text": "MemoryLimiter maintains a local state in memory using a Go map, making it suitable for single-instance deployments where global state across replicas is not needed.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "issue:C3",
+        "text": "RedisLimiter uses Redis to provide distributed rate limiting, utilizing Lua scripts for atomic updates to ensure consistent token counts across multiple instances.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E7",
+          "E9"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "issue:C4",
+        "text": "Both MemoryLimiter and RedisLimiter adhere to the RateLimiter interface that defines a method for checking if a request can be allowed based on token availability.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E1",
+          "E3"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "issue:C5",
+        "text": "The shared state for MemoryLimiter is local to the process, while RedisLimiter shares state across instances using a Redis backend.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E4",
+          "E8"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      {
+        "id": "issue:C6",
+        "text": "The documentation outlines both local (MemoryLimiter) and distributed (RedisLimiter) implementations, emphasizing their architectural differences and intended use cases.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      }
+    ],
+    "proposals": [
+      {
+        "action": "Enhance documentation",
+        "affected_files": [
+          "doc.go",
+          "README.md"
+        ],
+        "compatibility": "None",
+        "validation": "Ensure that the documentation clearly differentiates between MemoryLimiter and RedisLimiter."
+      },
+      {
+        "action": "Implement example usage",
+        "affected_files": [
+          "example_test.go"
+        ],
+        "compatibility": "None",
+        "validation": "Add examples demonstrating the usage of both MemoryLimiter and RedisLimiter."
+      },
+      {
+        "action": "Review state sharing details",
+        "affected_files": [
+          "memory.go",
+          "redis.go"
+        ],
+        "compatibility": "None",
+        "validation": "Clarify the implications of local versus distributed state in the documentation."
+      }
+    ],
+    "unanswered_questions": [],
+    "insufficient_evidence": false
+  },
+  "citation_checks": [
+    {
+      "evidence_id": "E1",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E2",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E3",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E4",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E5",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E6",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E7",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E8",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E9",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    },
+    {
+      "evidence_id": "E10",
+      "valid": true,
+      "reason": "Pinned blob, path, lines and excerpt match"
+    }
+  ],
+  "claims": [
+    {
+      "claim": {
+        "id": "doc:C1",
+        "text": "The architecture implements a token-bucket rate limiting system using two main components: MemoryLimiter and RedisLimiter.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "supported",
+      "reason": "The excerpts confirm that the architecture implements a token-bucket rate limiting system with both MemoryLimiter and RedisLimiter components.",
+      "supporting_quote": "// Package limiter provides local and distributed rate limiting based on the\n// Token Bucket algorithm.",
+      "accepted_as_observation": true
+    },
+    {
+      "claim": {
+        "id": "doc:C2",
+        "text": "MemoryLimiter maintains a local state in memory using a Go map, making it suitable for single-instance deployments where global state across replicas is not needed.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "// MemoryLimiter is an in-process token-bucket rate limiter.\n// It is safe for concurrent use by multiple goroutines, but its state is local\n// to the process and is not shared across replicas.",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "doc:C3",
+        "text": "RedisLimiter uses Redis to provide distributed rate limiting, utilizing Lua scripts for atomic updates to ensure consistent token counts across multiple instances.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E7",
+          "E9"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "// RedisLimiter is a distributed rate limiter backed by Redis.\n// It uses a Lua script to perform the token-bucket update atomically.",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "doc:C4",
+        "text": "Both MemoryLimiter and RedisLimiter adhere to the RateLimiter interface that defines a method for checking if a request can be allowed based on token availability.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E1",
+          "E3"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "supported",
+      "reason": "The excerpts from the evidence confirm both MemoryLimiter and RedisLimiter adhere to the RateLimiter interface.",
+      "supporting_quote": "RateLimiter performs token-bucket admission control.",
+      "accepted_as_observation": true
+    },
+    {
+      "claim": {
+        "id": "issue:C1",
+        "text": "The architecture implements a token-bucket rate limiting system using two main components: MemoryLimiter and RedisLimiter.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "supported",
+      "reason": "The same evidence confirms that the architecture implements a token-bucket rate limiting system using two components: MemoryLimiter and RedisLimiter.",
+      "supporting_quote": "// Package limiter provides local and distributed rate limiting based on the\n// Token Bucket algorithm.",
+      "accepted_as_observation": true
+    },
+    {
+      "claim": {
+        "id": "issue:C2",
+        "text": "MemoryLimiter maintains a local state in memory using a Go map, making it suitable for single-instance deployments where global state across replicas is not needed.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "// MemoryLimiter is an in-process token-bucket rate limiter.\n// Its state is local to the process and is not shared across replicas.",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "issue:C3",
+        "text": "RedisLimiter uses Redis to provide distributed rate limiting, utilizing Lua scripts for atomic updates to ensure consistent token counts across multiple instances.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E7",
+          "E9"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "// RedisLimiter is a distributed rate limiter backed by Redis.\n// It uses a Lua script to perform the token-bucket update atomically.",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "issue:C4",
+        "text": "Both MemoryLimiter and RedisLimiter adhere to the RateLimiter interface that defines a method for checking if a request can be allowed based on token availability.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E1",
+          "E3"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "supported",
+      "reason": "The evidence confirms both implementations adhere to the RateLimiter interface.",
+      "supporting_quote": "RateLimiter performs token-bucket admission control.",
+      "accepted_as_observation": true
+    },
+    {
+      "claim": {
+        "id": "issue:C5",
+        "text": "The shared state for MemoryLimiter is local to the process, while RedisLimiter shares state across instances using a Redis backend.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E2",
+          "E4",
+          "E8"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "// MemoryLimiter is local to the process and is not shared across replicas.\n// Use RedisLimiter when you need a single global limit across multiple instances.",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "issue:C6",
+        "text": "The documentation outlines both local (MemoryLimiter) and distributed (RedisLimiter) implementations, emphasizing their architectural differences and intended use cases.",
+        "kind": "architecture",
+        "evidence_ids": [
+          "E3",
+          "E4",
+          "E5"
+        ],
+        "confidence": "high",
+        "counter_evidence": ""
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "Support judgment lacks an exact quotation from this claim's cited evidence",
+      "supporting_quote": "# Distributed Rate Limiter\n\nA Redis-backed, distributed token bucket rate limiter for Go.",
+      "accepted_as_observation": false
+    }
+  ],
+  "insufficient_evidence": true,
+  "timings": {
+    "ingestion": 0.002,
+    "retrieval": 0.01,
+    "documentation": 7.728,
+    "investigation": 7.483,
+    "verification": 21.887
+  },
+  "usage": [
+    {
+      "stage": "documentation",
+      "attempt": 1,
+      "input_tokens": 5999,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 254,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 6253
+    },
+    {
+      "stage": "investigation",
+      "attempt": 1,
+      "input_tokens": 6329,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 486,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 6815
+    },
+    {
+      "stage": "semantic_verification",
+      "attempt": 1,
+      "input_tokens": 13198,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 761,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 13959
+    }
+  ],
+  "proposal_findings": [],
+  "tests_actually_run": [],
+  "human_checklist": [
+    "Read cited source at the pinned commit.",
+    "Review model support judgments; they are not a correctness guarantee.",
+    "Validate hypotheses and proposed changes in a separate trusted development workflow.",
+    "Run proposed correctness and performance checks before accepting a fix."
+  ]
+}

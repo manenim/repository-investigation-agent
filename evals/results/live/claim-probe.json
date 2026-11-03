@@ -1,0 +1,100 @@
+{
+  "mode": "live_model",
+  "model": "gpt-4o-mini",
+  "judgments": {
+    "judgments": [
+      {
+        "claim_id": "supported-interface",
+        "verdict": "supported",
+        "reason": "The RateLimiter interface declares the Allow method with the correct parameters as described in the claim.",
+        "supporting_quote": "Allow(ctx context.Context, id Identity, limit Limit) (Decision, error)"
+      },
+      {
+        "claim_id": "unsupported-performance",
+        "verdict": "insufficient_evidence",
+        "reason": "No evidence provided supports the claim about production p99 latency being reduced.",
+        "supporting_quote": ""
+      },
+      {
+        "claim_id": "unsupported-rendering",
+        "verdict": "insufficient_evidence",
+        "reason": "No evidence provided to substantiate that pkg.go.dev renders Mermaid diagrams correctly.",
+        "supporting_quote": ""
+      }
+    ]
+  },
+  "reconciled": [
+    {
+      "claim": {
+        "id": "supported-interface",
+        "text": "The RateLimiter interface declares Allow with context.Context, Identity and Limit parameters, returning Decision and error.",
+        "kind": "observation",
+        "evidence_ids": [
+          "E1"
+        ],
+        "confidence": "high",
+        "counter_evidence": "Source-level interface declaration only."
+      },
+      "reference_valid": true,
+      "verdict": "supported",
+      "reason": "The RateLimiter interface declares the Allow method with the correct parameters as described in the claim.",
+      "supporting_quote": "Allow(ctx context.Context, id Identity, limit Limit) (Decision, error)",
+      "accepted_as_observation": true
+    },
+    {
+      "claim": {
+        "id": "unsupported-performance",
+        "text": "This repository reduced production p99 latency by 90% after a deployed fix yesterday.",
+        "kind": "observation",
+        "evidence_ids": [
+          "E1"
+        ],
+        "confidence": "high",
+        "counter_evidence": "No runtime measurements supplied."
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "No evidence provided supports the claim about production p99 latency being reduced.",
+      "supporting_quote": "",
+      "accepted_as_observation": false
+    },
+    {
+      "claim": {
+        "id": "unsupported-rendering",
+        "text": "pkg.go.dev was tested and renders every Mermaid diagram correctly.",
+        "kind": "observation",
+        "evidence_ids": [
+          "E1"
+        ],
+        "confidence": "high",
+        "counter_evidence": "No rendering tests supplied."
+      },
+      "reference_valid": true,
+      "verdict": "insufficient_evidence",
+      "reason": "No evidence provided to substantiate that pkg.go.dev renders Mermaid diagrams correctly.",
+      "supporting_quote": "",
+      "accepted_as_observation": false
+    }
+  ],
+  "usage": [
+    {
+      "stage": "semantic_verification",
+      "attempt": 1,
+      "input_tokens": 1206,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 133,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 1339
+    }
+  ],
+  "expected": {
+    "supported-interface": "supported",
+    "unsupported-performance": "unsupported",
+    "unsupported-rendering": "unsupported"
+  }
+}

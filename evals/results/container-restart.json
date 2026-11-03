@@ -1,0 +1,12 @@
+{
+  "mode": "real_container",
+  "completed_run_id": "74220d4f69dd4202a65f28854c3a986a",
+  "completed_export_sha256_before": "de814d65aca5f4fe3ccdd1a022c7e25bd36b2286af043a6959dd2db3477d0f5f",
+  "completed_export_sha256_after": "de814d65aca5f4fe3ccdd1a022c7e25bd36b2286af043a6959dd2db3477d0f5f",
+  "completed_report_unchanged": true,
+  "ready_http": 200,
+  "interrupted_run_id": "5ddda20dccff446faae6395e1782c0af",
+  "interrupted_status": "failed",
+  "interrupted_error": "Worker stopped before completion",
+  "volume": "repository-investigation-agent_reports"
+}

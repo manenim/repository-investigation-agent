@@ -1,0 +1,63 @@
+{
+  "analysis": {
+    "claims": [
+      {
+        "id": "quote1",
+        "text": "type Namespace string",
+        "kind": "observation",
+        "evidence_ids": [
+          "E1"
+        ],
+        "confidence": "low",
+        "counter_evidence": "Literal source quotation only; no behavioral inference."
+      },
+      {
+        "id": "quote2",
+        "text": "\"github.com/redis/go-redis/v9\"",
+        "kind": "observation",
+        "evidence_ids": [
+          "E2"
+        ],
+        "confidence": "low",
+        "counter_evidence": "Literal source quotation only; no behavioral inference."
+      },
+      {
+        "id": "quote3",
+        "text": "11.31% flat. String concatenation and allocation are visible costs in this run.",
+        "kind": "observation",
+        "evidence_ids": [
+          "E3"
+        ],
+        "confidence": "low",
+        "counter_evidence": "Literal source quotation only; no behavioral inference."
+      }
+    ],
+    "proposals": [],
+    "unanswered_questions": [
+      "Offline sample extracts source only. Use a live provider for investigation."
+    ],
+    "insufficient_evidence": true
+  },
+  "review": {
+    "judgments": [
+      {
+        "claim_id": "quote1",
+        "verdict": "supported",
+        "reason": "Deterministic literal-excerpt check only; no semantic model review.",
+        "supporting_quote": "type Namespace string"
+      },
+      {
+        "claim_id": "quote2",
+        "verdict": "supported",
+        "reason": "Deterministic literal-excerpt check only; no semantic model review.",
+        "supporting_quote": "\"github.com/redis/go-redis/v9\""
+      },
+      {
+        "claim_id": "quote3",
+        "verdict": "supported",
+        "reason": "Deterministic literal-excerpt check only; no semantic model review.",
+        "supporting_quote": "11.31% flat. String concatenation and allocation are visible costs in this run."
+      }
+    ]
+  }
+}

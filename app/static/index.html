@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Trace — Repository investigation</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">t<span class="brand-dot">.</span> trace</a
+      ><span class="top-label">REPOSITORY INTELLIGENCE</span
+      ><span class="read-only">↗ Read-only by design</span>
+    </header>
+    <main>
+      <div class="intro">
+        <p class="eyebrow">CODE → CONTEXT → EVIDENCE</p>
+        <h1>Investigate with<br /><em>the source in sight.</em></h1>
+        <p class="lede">
+          Turn a repository question into a commit-pinned report.<br />Follow
+          the evidence. Review the uncertainty.
+        </p>
+      </div>
+      <div class="workspace">
+        <aside>
+          <div class="panel">
+            <div class="panel-heading">
+              <span class="step-number">01</span>
+              <h2>Start an investigation</h2>
+            </div>
+            <form id="investigation-form">
+              <label for="repository">Repository</label
+              ><select id="repository">
+                <option>manenim/gateway-rate-limiter</option>
+              </select>
+              <div class="field-row">
+                <div>
+                  <label for="ref">Branch or commit</label
+                  ><input id="ref" value="main" maxlength="100" required />
+                </div>
+                <span class="language">● Go</span>
+              </div>
+              <label for="input-mode">Issue source</label
+              ><select id="input-mode">
+                <option value="paste">Paste a question or issue</option>
+                <option value="url">GitHub issue URL</option>
+              </select>
+              <div id="paste-fields">
+                <label for="issue-title">Title</label
+                ><input
+                  id="issue-title"
+                  placeholder="e.g. Redis errors let requests through"
+                  maxlength="200"
+                /><label for="issue-body">Description</label
+                ><textarea
+                  id="issue-body"
+                  placeholder="Describe what you observed, what you expected, and what you want to investigate…"
+                  maxlength="6000"
+                  rows="5"
+                ></textarea>
+              </div>
+              <div id="url-fields" hidden>
+                <label for="issue-url">Issue URL</label
+                ><input
+                  id="issue-url"
+                  type="url"
+                  placeholder="https://github.com/manenim/gateway-rate-limiter/issues/1"
+                />
+              </div>
+              <label for="access-token">Demo access token</label
+              ><input
+                id="access-token"
+                type="password"
+                autocomplete="off"
+                placeholder="Required for live generation"
+              />
+              <p class="hint">
+                Kept in this tab’s memory only. Ask the operator for access.
+              </p>
+              <button class="primary" id="submit" type="submit">
+                Investigate repository <span>↗</span>
+              </button>
+            </form>
+            <div class="divider"></div>
+            <button id="sample" class="sample-button">
+              Explore the sample report <span>→</span>
+            </button>
+            <p class="hint" id="mode-note">Loading service configuration…</p>
+          </div>
+          <p class="boundary">
+            No code execution. No repository changes.<br />Every recommendation
+            stays a proposal.
+          </p>
+        </aside>
+        <section class="results" aria-label="Investigation results">
+          <div class="result-top">
+            <span class="eyebrow">INVESTIGATION WORKSPACE</span
+            ><span id="status-badge" class="badge">Ready</span>
+          </div>
+          <div id="error" role="alert" hidden></div>
+          <ol id="stages" class="stages">
+            <li data-stage="ingestion">Resolve & ingest</li>
+            <li data-stage="retrieval">Select evidence</li>
+            <li data-stage="documentation">Document</li>
+            <li data-stage="investigation">Investigate</li>
+            <li data-stage="verification">Verify</li>
+          </ol>
+          <div id="empty" class="empty">
+            <div class="evidence-symbol">⌕</div>
+            <h2>Good answers start with evidence.</h2>
+            <p>
+              Choose an issue to trace its relevant code paths,<br />or explore
+              a completed sample.
+            </p>
+            <div class="empty-cards">
+              <div>
+                <strong>01 / Pin</strong><span>One immutable commit</span>
+              </div>
+              <div>
+                <strong>02 / Trace</strong
+                ><span>Code, with line references</span>
+              </div>
+              <div>
+                <strong>03 / Verify</strong
+                ><span>Claims checked separately</span>
+              </div>
+            </div>
+          </div>
+          <div id="progress" role="status" aria-live="polite" hidden>
+            <h2>Following the evidence…</h2>
+            <p id="progress-text"></p>
+          </div>
+          <article id="report" hidden></article>
+        </section>
+      </div>
+      <footer>
+        <span>TRACE / Independent engineering project</span
+        ><span>Built for human review.</span>
+      </footer>
+    </main>
+  </body>
+</html>
