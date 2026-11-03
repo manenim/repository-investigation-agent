@@ -19,6 +19,7 @@ shutil.copyfile(root / "evals/sample-report.md", out / "sample.md")
             "provider": "saved_sample",
             "source": "pinned_fixture",
             "public_sample_only": True,
+            "live_url": "https://repository-investigation-agent.onrender.com",
             "generation_configured": False,
         }
     )

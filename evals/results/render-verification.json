@@ -1,0 +1,17 @@
+{
+  "url": "https://repository-investigation-agent.onrender.com",
+  "health_http": 200,
+  "ready_http": 200,
+  "unauthenticated_report_http": 401,
+  "generation_attempt_status": "failed",
+  "generation_error": "GitHub returned HTTP 403",
+  "run_id": "dbbc8b5789434682a60927bb0dd43e67",
+  "full_live_flow_complete": false,
+  "blocker": "Read-only GitHub credential required; GitHub sudo-mode authentication pending",
+  "deployed_commit": "03288fc3193be7a02efca971ea1876c7a68ee423",
+  "database": "Render Free PostgreSQL 18",
+  "database_expires": "2026-12-03",
+  "model_key_expires": "2026-11-10",
+  "monthly_service_price_usd": 0,
+  "monthly_database_price_usd": 0
+}

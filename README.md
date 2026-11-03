@@ -2,9 +2,13 @@
 
 An independent engineering project by Manenimabasi Udoh. Trace documents and investigates one public Go repository at an immutable commit, then checks source references and model claim support separately. It produces a human-review report, not an automatic patch.
 
-**Public saved-report viewer:** https://repository-investigation-agent.vercel.app
+**Hosted app:** https://repository-investigation-agent.onrender.com  
+**Public saved-report viewer:** https://repository-investigation-agent.vercel.app  
+**Source:** https://github.com/manenim/repository-investigation-agent
 
-The public deployment is a static viewer of an actual saved model report. **New investigations run through the FastAPI backend; that backend is not publicly deployed.** No API credentials or paid-generation endpoint are included in the viewer. See `docs/deployment.md` for the specific hosting blocker and reproducible deployment steps.
+The app is deployed on Render Free with managed PostgreSQL 18. Health/readiness and authenticated run storage work. **The hosted generation smoke test is blocked by GitHub HTTP 403: a dedicated read-only GitHub credential is still required.** GitHub requires owner reauthentication before creating it. Full live-model generation, exports and container persistence have been tested locally; the saved public report was generated with the real model and real GitHub ingestion.
+
+The free database expires **3 December 2026**, the current model key expires **10 November 2026**, and the free web service sleeps when idle. Export reports before expiry. No paid resources or recurring subscription were purchased. See `docs/deployment.md` for deployment evidence and exact remaining steps.
 
 ## Run locally
 
@@ -36,7 +40,7 @@ flowchart LR
   R --> D[Documentation stage]
   D --> I[Investigation stage]
   I --> V[Reference checks and separate semantic review]
-  V --> DB[(SQLite on persistent volume)]
+  V --> DB[(SQLite volume / managed Postgres)]
   DB --> OUT[Review UI and Markdown / JSON exports]
 ```
 
@@ -72,13 +76,15 @@ Protected endpoints require `Authorization: Bearer <ACCESS_TOKEN>`. This is a si
 | `OPENAI_MODEL` | `gpt-4o-mini`; a configurable model must support Responses structured output |
 | `ACCESS_TOKEN` | Required, at least 24 characters; use a cryptographically random value |
 | `GITHUB_TOKEN` | Optional narrowly scoped read token for public GitHub rate limits |
+| `DATABASE_URL` | Managed PostgreSQL connection; overrides SQLite. Required on Render; invalid/ephemeral storage is refused |
+| `DEPLOYMENT_NOTICE` | Optional public notice; hosted demo displays database/key expiry |
 | `DB_PATH` | `data/investigations.sqlite3`; must be on a persistent volume in deployment |
 | `SOURCE_MODE` | `github` or explicit `snapshot` fixture mode |
 | `PROVIDER` | `openai` or explicit `sample` extractive provider |
 | `MAX_DAILY_RUNS` | 20 persisted submissions per UTC day, including failed runs |
 | `MAX_STORED_RUNS` | 200; refuse new runs when full rather than silently evict reports |
 
-One active run; at most four waiting. Three admissions per minute globally. Issue title/body limits are 200/6,000 characters and POST bodies are limited to 12 KB. Inventory has at most 2,000 entries; at most 60 eligible files, 40 KB/file, 512 KB total decoded source. A response-level streaming cap also bounds GitHub JSON. Binary, symlink, vendor, generated and benchmark-record content is skipped. Oversized inventories fail explicitly; skipped files are reported.
+The hosted demo permits five submissions per day; local default is 20. One active run; at most four waiting. Three admissions per minute globally. Issue title/body limits are 200/6,000 characters and POST bodies are limited to 12 KB. Inventory has at most 2,000 entries; at most 60 eligible files, 40 KB/file, 512 KB total decoded source. A response-level streaming cap also bounds GitHub JSON. Binary, symlink, vendor, generated and benchmark-record content is skipped. Oversized inventories fail explicitly; skipped files are reported.
 
 Retrieval selects at most ten overlapping 44-line chunks, under 20 KB including metadata allowances. Model payload plus instructions cannot exceed 52 KB; UTF-8 bytes provide a conservative text-token upper bound. Output is capped at 3,500 tokens per call. Each transient upstream operation has at most three attempts with short exponential backoff; whole runs have a 420-second deadline. Input length, retries and daily runs are usage bounds, not a monetary billing guarantee. Token usage is stored; billed dollars are not inferred.
 
@@ -95,7 +101,7 @@ Retrieval selects at most ten overlapping 44-line chunks, under 20 KB including 
 .venv/bin/python -m scripts.claim_probe
 ```
 
-The 12 source-inspected cases cover architecture, retrieval, known code scenarios and two insufficient-evidence questions. Three adversarial mutations cover a hostile README, secret-seeking issue, and source comment redirecting tool use. `docs/evaluation.md` defines metrics, fixture basis, manual rubric and observed limitations. Raw results are in `evals/results`; deterministic tests are separate from actual live-provider results. The CI workflow runs the application checks, deterministic evaluation and container build; live checks are deliberately not automatic on PRs. Hosted CI has not been run unless a run URL is recorded.
+The 12 source-inspected cases cover architecture, retrieval, known code scenarios and two insufficient-evidence questions. Three adversarial mutations cover a hostile README, secret-seeking issue, and source comment redirecting tool use. `docs/evaluation.md` defines metrics, fixture basis, manual rubric and observed limitations. Raw results are in `evals/results`; deterministic tests are separate from actual live-provider results. The CI workflow runs the application checks, deterministic evaluation and container build; live checks are deliberately not automatic on PRs. Hosted [CI passed](https://github.com/manenim/repository-investigation-agent/actions/runs/41667367525) on commit `03288fc`; later source revisions have their own checks.
 
 ## Docker and persistence
 
@@ -105,6 +111,8 @@ curl --fail http://localhost:8000/health
 curl --fail http://localhost:8000/ready
 docker compose restart trace
 ```
+
+For Render, `DATABASE_URL` uses managed Postgres rather than a local file. The SQLite and Postgres adapters share fixed, parameterized SQL and run the same workflow; the single process reuses its Postgres connection, with transaction boundaries per store operation.
 
 The non-root container uses a named `reports` volume for SQLite and binds the service to localhost by default. Place it behind HTTPS on an existing host to publish the full service. Exactly one process and one replica are supported; do not increase Uvicorn workers or horizontally scale. Runs interrupted by shutdown/restart are marked failed rather than replaying paid calls. Completed reports survive restart. This is not a durable queue or distributed execution system. Back up SQLite using its online backup API, including normal WAL semantics; do not delete the volume when upgrading.
 

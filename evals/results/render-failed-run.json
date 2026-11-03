@@ -1,0 +1,17 @@
+{
+  "id": "dbbc8b5789434682a60927bb0dd43e67",
+  "created_at": "2026-11-03T15:49:35.531270+00:00",
+  "updated_at": "2026-11-03T15:49:36.165351+00:00",
+  "status": "failed",
+  "stage": "ingestion",
+  "request": {
+    "repository": "manenim/gateway-rate-limiter",
+    "ref": "main",
+    "issue_url": "https://github.com/manenim/gateway-rate-limiter/issues/1",
+    "title": "",
+    "body": ""
+  },
+  "progress": {},
+  "report": null,
+  "error": "GitHub returned HTTP 403"
+}

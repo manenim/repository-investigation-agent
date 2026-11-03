@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -53,6 +54,7 @@ class Store:
                 status TEXT NOT NULL, stage TEXT NOT NULL, request TEXT NOT NULL,
                 progress TEXT NOT NULL, report TEXT, error TEXT)""")
 
+    @contextmanager
     def connect(self):
         if self.postgres:
             if self._pg_connection is None or self._pg_connection.closed:
@@ -62,10 +64,16 @@ class Store:
                     row_factory=dict_row,
                     options="-c statement_timeout=5000",
                 )
-            return PostgresConnection(self._pg_connection)
-        db = sqlite3.connect(self.path, timeout=5)
-        db.row_factory = sqlite3.Row
-        return db
+            with PostgresConnection(self._pg_connection) as connection:
+                yield connection
+        else:
+            sqlite_connection = sqlite3.connect(self.path, timeout=5)
+            sqlite_connection.row_factory = sqlite3.Row
+            try:
+                with sqlite_connection:
+                    yield sqlite_connection
+            finally:
+                sqlite_connection.close()
 
     def close(self):
         if self._pg_connection is not None:

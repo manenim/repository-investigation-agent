@@ -289,7 +289,10 @@ $("sample").onclick = async () => {
 };
 api("/config")
   .then((c) => {
-    if (c.deployment_notice) { const notice = el("p", c.deployment_notice, "outcome caution"); document.querySelector(".intro").append(notice); }
+    if (c.deployment_notice) {
+      const notice = el("p", c.deployment_notice, "outcome caution");
+      document.querySelector(".intro").append(notice);
+    }
     if (c.public_sample_only) {
       $("submit").disabled = true;
       $("submit").textContent = "Public viewer · generation unavailable";
@@ -299,6 +302,9 @@ api("/config")
       $("investigation-form").hidden = true;
       document.querySelector(".panel-heading h2").textContent =
         "Saved investigation";
+      const liveLink = el("a", "Open the live app ↗", "cite");
+      liveLink.href = "https://repository-investigation-agent.onrender.com";
+      document.querySelector(".panel").append(liveLink);
       $("sample").click();
       return;
     }

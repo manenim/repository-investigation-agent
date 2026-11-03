@@ -23,7 +23,7 @@ logging.getLogger("httpx2").setLevel(logging.WARNING)
 
 def create_app(settings: Settings | None = None, source=None, provider_factory=None) -> FastAPI:
     config = settings or Settings()
-    if config.render and not config.database_url:
+    if config.render and not config.database_url.startswith(("postgres://", "postgresql://")):
         raise RuntimeError("Render deployment requires DATABASE_URL; ephemeral SQLite is refused")
     store = Store(config.database_url or config.db_path)
     source = source or (

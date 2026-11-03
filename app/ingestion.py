@@ -69,6 +69,13 @@ class GitHubSource:
                     async with client.stream("GET", route) as response:
                         if response.status_code in (429, 502, 503, 504):
                             raise httpx.ReadTimeout("Transient GitHub failure")
+                        if (
+                            response.status_code == 403
+                            and response.headers.get("x-ratelimit-remaining") == "0"
+                        ):
+                            raise IngestionError(
+                                "GitHub rate limit exhausted; configure a read-only GITHUB_TOKEN"
+                            )
                         if response.status_code != 200:
                             raise IngestionError(f"GitHub returned HTTP {response.status_code}")
                         raw = bytearray()
@@ -146,11 +153,12 @@ class GitHubSource:
             issue = await self.get(f"/repos/{repo}/issues/{number}", 64_000)
             if "pull_request" in issue:
                 raise IngestionError("Expected an issue, not a pull request")
+            if len(str(issue["title"])) > 200 or len(str(issue.get("body") or "")) > 6000:
+                raise IngestionError(
+                    "GitHub issue exceeds the supported title/body budget; paste a shorter description"
+                )
             request = request.model_copy(
-                update={
-                    "title": str(issue["title"])[:200],
-                    "body": str(issue.get("body") or "")[:6000],
-                }
+                update={"title": str(issue["title"]), "body": str(issue.get("body") or "")}
             )
         return Snapshot(repository=repo, sha=sha, files=files, skipped=skipped), request
 

@@ -5,5 +5,7 @@
   "report_survives_app_restart": true,
   "interrupted_run_marked_failed": true,
   "capacity_admission_enforced": true,
-  "mode": "deterministic_provider_real_database"
+  "mode": "deterministic_provider_real_database",
+  "database_location": "Local Docker PostgreSQL 16",
+  "tested_source_commit": "03288fc3193be7a02efca971ea1876c7a68ee423"
 }

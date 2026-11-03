@@ -4,7 +4,7 @@
   "model": "gpt-4o-mini",
   "source": "pinned_fixture",
   "commit": "50eb89b722a068b2e63fa1dfe2a87d2605ae564a",
-  "automated_tests": 42,
+  "automated_tests": 44,
   "live_workflows_completed": 12,
   "live_workflows_attempted": 12,
   "retrieval_region_overlap": {
@@ -85,6 +85,8 @@
     "One unsupported compound observation was still accepted in the reviewed subset.",
     "14 source-supported claims were conservatively flagged in that subset.",
     "No independent human review or production quality evaluation.",
-    "Full remote backend not deployed; Vercel serves only a static saved report."
-  ]
+    "Render service deployed with managed Postgres; full hosted generation/export/restart verification remains blocked by a read-only GitHub credential."
+  ],
+  "hosted_service": "https://repository-investigation-agent.onrender.com",
+  "hosted_generation_blocker": "GitHub HTTP 403; dedicated read-only GitHub token and hosted full-flow verification pending"
 }
